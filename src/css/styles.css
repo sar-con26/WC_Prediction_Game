@@ -887,3 +887,21 @@ body {
         transform: rotate(90deg);
     }
 }
+
+.header-admin {
+    display: flex;
+    align-items: center;
+}
+
+.admin-link {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.admin-link:hover {
+    color: #86BC25;
+}

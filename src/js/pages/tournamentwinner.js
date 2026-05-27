@@ -2,53 +2,67 @@
 
 function createTournamentWinnerPage() {
     const teams = [
-        '🇦🇷 Argentina',
-        '🇦🇺 Australia',
-        '🇧🇪 Belgium',
-        '🇧🇷 Brazil',
-        '🇨🇦 Canada',
-        '🇨🇭 Switzerland',
-        '🇨🇱 Chile',
-        '🇨🇲 Cameroon',
-        '🇨🇴 Colombia',
-        '🇨🇷 Costa Rica',
-        '🇩🇪 Germany',
-        '🇩🇰 Denmark',
-        '🇪🇨 Ecuador',
-        '🇪🇬 Egypt',
-        '🇪🇸 Spain',
-        '🇫🇷 France',
-        '🇬🇧 England',
-        '🇬🇭 Ghana',
-        '🇬🇷 Greece',
-        '🇭🇳 Honduras',
-        '🇮🇹 Italy',
-        '🇮🇷 Iran',
-        '🇯🇵 Japan',
-        '🇲🇪 Montenegro',
-        '🇲🇽 Mexico',
-        '🇲🇦 Morocco',
-        '🇳🇱 Netherlands',
-        '🇳🇿 New Zealand',
-        '🇳🇬 Nigeria',
-        '🇵🇦 Panama',
-        '🇵🇪 Peru',
-        '🇵🇱 Poland',
-        '🇵🇹 Portugal',
-        '🇷🇴 Romania',
-        '🇷🇺 Russia',
-        '🇸🇦 Saudi Arabia',
-        '🇸🇪 Sweden',
-        '🇸🇬 Singapore',
-        '🇸🇰 Slovakia',
-        '🇹🇭 Thailand',
-        '🇹🇳 Tunisia',
-        '🇹🇷 Turkey',
-        '🇺🇦 Ukraine',
+        // CONCACAF - HOST NATIONS (3 teams)
         '🇺🇸 United States',
+        '🇲🇽 Mexico',
+        '🇨🇦 Canada',
+        
+        // CONCACAF - QUALIFIED (3 teams)
+        '🇨🇼 Curaçao',
+        '🇭🇹 Haiti',
+        '🇵🇦 Panama',
+        
+        // CONMEBOL (6 teams)
+        '🇦🇷 Argentina',
+        '🇧🇷 Brazil',
+        '🇨🇴 Colombia',
+        '🇪🇨 Ecuador',
+        '🇵🇾 Paraguay',
         '🇺🇾 Uruguay',
-        '🇻🇪 Venezuela',
-        '🇿🇦 South Africa'
+        
+        // UEFA (16 teams)
+        '🇦🇹 Austria',
+        '🇧🇪 Belgium',
+        '🇧🇦 Bosnia and Herzegovina',
+        '🇭🇷 Croatia',
+        '🇨🇿 Czechia',
+        '🇬🇧 England',
+        '🇫🇷 France',
+        '🇩🇪 Germany',
+        '🇳🇱 Netherlands',
+        '🇳🇴 Norway',
+        '🇵🇹 Portugal',
+        '🇬🇧 Scotland',
+        '🇪🇸 Spain',
+        '🇸🇪 Sweden',
+        '🇨🇭 Switzerland',
+        '🇹🇷 Türkiye',
+        
+        // AFC (9 teams)
+        '🇦🇺 Australia',
+        '🇮🇶 Iraq',
+        '🇮🇷 IR Iran',
+        '🇯🇵 Japan',
+        '🇯🇴 Jordan',
+        '🇰🇷 Korea Republic',
+        '🇶🇦 Qatar',
+        '🇸🇦 Saudi Arabia',
+        '🇺🇿 Uzbekistan',
+        
+        // CAF (10 teams)
+        '🇩🇿 Algeria',
+        '🇨🇻 Cabo Verde',
+        '🇨🇩 Congo DR',
+        '🇨🇮 Côte d\'Ivoire',
+        '🇪🇬 Egypt',
+        '🇬🇭 Ghana',
+        '🇲🇦 Morocco',
+        '🇸🇳 Senegal',
+        '🇿🇦 South Africa',
+        '🇹🇳 Tunisia',
+        
+        // OFC (1 team)
+        '🇳🇿 New Zealand'
     ];
 
     const teamOptions = teams.map(team => 

@@ -63,6 +63,12 @@ function initApp() {
     goldenGlovePage.className = 'page';
     goldenGlovePage.id = 'goldenGlovePage';
     app.appendChild(goldenGlovePage);
+
+    // Create admin page
+    const adminPage = document.createElement('div');
+    adminPage.className = 'page';
+    adminPage.id = 'adminPage';
+    app.appendChild(adminPage);
 }
 
 // Show/Hide pages function
@@ -95,6 +101,10 @@ function showPage(pageId) {
         } else if (pageId === 'goldenGlovePage' && !targetPage.innerHTML) {
             console.log('Creating Golden Glove Page');
             targetPage.innerHTML = createGoldenGlovePage();
+        }
+        else if (pageId === 'adminPage' && !targetPage.innerHTML) {
+        console.log('Creating Admin Page');
+        targetPage.innerHTML = createAdminPage();
         }
         
         // Show the page - use multiple methods to ensure it's visible

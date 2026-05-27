@@ -1,6 +1,12 @@
 // Homepage
 
 function createHomePage() {
+    // Get the assigned team from localStorage
+    const assignedTeam = JSON.parse(localStorage.getItem('assignedTeam') || '{}');
+    const teamDisplay = assignedTeam.flag && assignedTeam.name 
+        ? `${assignedTeam.flag} ${assignedTeam.name}` 
+        : 'Your Team';
+    
     return `
         <button class="back-button" onclick="showPage('loginPage')">
             <i class="fas fa-arrow-left"></i> Back to Login
@@ -12,10 +18,14 @@ function createHomePage() {
             </div>
             <div class="header-title">
                 <h1>World Cup Predictor</h1>
-            </div>
-            <div class="header-user">
+            </div>            <div class="header-user">
                 <i class="fas fa-flag"></i>
-                <span>Your Team: Spain</span>
+                <span>${teamDisplay}</span>
+            </div>
+            <div class="header-admin">
+                <button class="admin-link" onclick="showPage('adminPage')" title="Admin Panel">
+                    <i class="fas fa-shield-alt"></i>
+                </button>
             </div>
         </div>
 
