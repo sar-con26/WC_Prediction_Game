@@ -1,0 +1,328 @@
+/* Prediction Pages Styling */
+
+.prediction-page {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.prediction-header {
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.prediction-header h1 {
+    font-size: 2.5rem;
+    color: #86BC25;
+    margin: 20px 0;
+    font-weight: 700;
+}
+
+.progress-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.progress-step {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #2a3f5f;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    border: 2px solid #444;
+}
+
+.progress-step.active {
+    background: #86BC25;
+    border-color: #86BC25;
+    color: #fff;
+}
+
+.progress-step.completed {
+    background: #86BC25;
+    border-color: #86BC25;
+    color: #fff;
+}
+
+.progress-line {
+    width: 30px;
+    height: 2px;
+    background: #444;
+}
+
+.back-button {
+    background: none;
+    border: none;
+    color: #86BC25;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.back-button:hover {
+    transform: translateX(-5px);
+    color: #0D1F2D;
+}
+
+/* Progress Indicator */
+.progress-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 30px;
+}
+
+.progress-step {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #2a3f5f;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.progress-step.active {
+    background: #86BC25;
+    box-shadow: 0 0 20px rgba(134, 188, 37, 0.5);
+}
+
+.progress-step.completed {
+    background: #86BC25;
+}
+
+.progress-line {
+    width: 30px;
+    height: 2px;
+    background: #2a3f5f;
+}
+
+/* Prediction Content */
+.prediction-content {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(134, 188, 37, 0.2);
+    border-radius: 15px;
+    padding: 40px;
+    backdrop-filter: blur(10px);
+}
+
+.prediction-form {
+    margin-bottom: 30px;
+}
+
+.prediction-form label {
+    display: block;
+    font-size: 1.1rem;
+    color: #fff;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.prediction-form label i {
+    color: #86BC25;
+    margin-right: 10px;
+}
+
+.form-input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid rgba(134, 188, 37, 0.3);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    font-size: 1rem;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s ease;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #86BC25;
+    background: rgba(134, 188, 37, 0.1);
+    box-shadow: 0 0 15px rgba(134, 188, 37, 0.3);
+}
+
+.form-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2386BC25' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 20px;
+    padding-right: 40px;
+}
+
+.form-select option {
+    background: #0D1F2D;
+    color: #fff;
+}
+
+.character-counter {
+    font-size: 0.85rem;
+    color: #86BC25;
+    margin-top: 8px;
+    text-align: right;
+}
+
+.form-hint {
+    display: block;
+    font-size: 0.9rem;
+    color: #aaa;
+    margin-top: 10px;
+}
+
+/* Prediction Actions */
+.prediction-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.btn {
+    padding: 12px 30px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #86BC25 0%, #6ba01f 100%);
+    color: #fff;
+    flex: 1;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(134, 188, 37, 0.3);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #86BC25;
+    border: 1px solid rgba(134, 188, 37, 0.3);
+    flex: 1;
+}
+
+.btn-secondary:hover {
+    background: rgba(134, 188, 37, 0.1);
+    border-color: #86BC25;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .prediction-page {
+        padding: 20px 15px;
+    }
+
+    .prediction-header h1 {
+        font-size: 2rem;
+    }
+
+    .prediction-content {
+        padding: 25px;
+    }
+
+    .progress-indicator {
+        gap: 5px;
+    }
+
+    .progress-step {
+        width: 35px;
+        height: 35px;
+        font-size: 0.9rem;
+    }
+
+    .progress-line {
+        width: 20px;
+    }
+
+    .prediction-form label {
+        font-size: 1rem;
+    }
+
+    .prediction-actions {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .prediction-page {
+        padding: 15px 10px;
+    }
+
+    .prediction-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .prediction-content {
+        padding: 20px;
+    }
+
+    .progress-indicator {
+        gap: 3px;
+    }
+
+    .progress-step {
+        width: 30px;
+        height: 30px;
+        font-size: 0.8rem;
+    }
+
+    .progress-line {
+        width: 15px;
+    }
+
+    .form-input {
+        padding: 10px 12px;
+        font-size: 0.95rem;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        font-size: 0.95rem;
+    }
+}

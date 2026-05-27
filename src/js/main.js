@@ -45,6 +45,107 @@ function initApp() {
     predictionsPage.id = 'scoreGuesserPage';
     predictionsPage.innerHTML = createPredictionsPage();
     app.appendChild(predictionsPage);
+    
+    // Create tournament winner page
+    const tournamentWinnerPage = document.createElement('div');
+    tournamentWinnerPage.className = 'page';
+    tournamentWinnerPage.id = 'tournamentWinnerPage';
+    app.appendChild(tournamentWinnerPage);
+    
+    // Create golden boot page
+    const goldenBootPage = document.createElement('div');
+    goldenBootPage.className = 'page';
+    goldenBootPage.id = 'goldenBootPage';
+    app.appendChild(goldenBootPage);
+    
+    // Create golden glove page
+    const goldenGlovePage = document.createElement('div');
+    goldenGlovePage.className = 'page';
+    goldenGlovePage.id = 'goldenGlovePage';
+    app.appendChild(goldenGlovePage);
+}
+
+// Show/Hide pages function
+function showPage(pageId) {
+    console.log('=== showPage called with:', pageId);
+    
+    // Hide all pages
+    const pages = document.querySelectorAll('.page');
+    console.log('Total pages found:', pages.length);
+    pages.forEach(page => {
+        page.classList.remove('active');
+        page.style.display = 'none';
+    });
+    
+    // Find and show target page
+    const targetPage = document.getElementById(pageId);
+    console.log('Looking for page with ID:', pageId);
+    console.log('Target page found:', !!targetPage);
+    
+    if (targetPage) {
+        console.log('Target page found, rendering content...');
+        
+        // Dynamically render prediction pages when shown
+        if (pageId === 'tournamentWinnerPage' && !targetPage.innerHTML) {
+            console.log('Creating Tournament Winner Page');
+            targetPage.innerHTML = createTournamentWinnerPage();
+        } else if (pageId === 'goldenBootPage' && !targetPage.innerHTML) {
+            console.log('Creating Golden Boot Page');
+            targetPage.innerHTML = createGoldenBootPage();
+        } else if (pageId === 'goldenGlovePage' && !targetPage.innerHTML) {
+            console.log('Creating Golden Glove Page');
+            targetPage.innerHTML = createGoldenGlovePage();
+        }
+        
+        // Show the page - use multiple methods to ensure it's visible
+        targetPage.classList.add('active');
+        targetPage.style.display = 'block';
+        targetPage.style.visibility = 'visible';
+        targetPage.style.opacity = '1';
+        console.log('✓ Page activated:', pageId);
+        console.log('Page HTML length:', targetPage.innerHTML.length);
+    } else {
+        console.error('✗ Page not found:', pageId);
+        console.log('Available pages:', Array.from(pages).map(p => p.id));
+    }
+}
+
+// Initialize prediction flow after team assignment
+function initPredictionFlow() {
+    const userId = localStorage.getItem('userId');
+    
+    localStorage.setItem('predictionState', JSON.stringify({
+        userId: userId,
+        teamAssigned: true,
+        predictions: {
+            tournamentWinner: false,
+            goldenBoot: false,
+            goldenGlove: false
+        },
+        completedAt: {},
+        allPredictionsComplete: false
+    }));
+    
+    localStorage.setItem('predictions', JSON.stringify({}));
+    
+    setTimeout(() => {
+        showPage('tournamentWinnerPage');
+    }, 1500);
+}
+
+// Helper function to go back to previous page
+function goBackToPreviousPage() {
+    const predictionState = JSON.parse(localStorage.getItem('predictionState') || '{}');
+    
+    if (!predictionState.predictions?.tournamentWinner) {
+        showPage('allocationPage');
+    } else if (!predictionState.predictions?.goldenBoot) {
+        showPage('tournamentWinnerPage');
+    } else if (!predictionState.predictions?.goldenGlove) {
+        showPage('goldenBootPage');
+    } else {
+        showPage('homePage');
+    }
 }
 
 // Start app when DOM is ready
