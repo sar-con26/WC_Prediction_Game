@@ -1,4 +1,4 @@
-// Login Page
+// login.js - UPDATED WITH API INTEGRATION
 
 function createLoginPage() {
     return `
@@ -20,7 +20,9 @@ function createLoginPage() {
                     <input type="password" id="password" class="form-input" placeholder="Enter your password">
                 </div>
                 
-                <button type="button" class="btn btn-primary" onclick="showPage('homePage')">
+                <div id="login-error" class="error-message" style="display: none; color: #EF4444; margin-bottom: 15px; padding: 12px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border-left: 3px solid #EF4444;"></div>
+                
+                <button type="button" class="btn btn-primary" onclick="handleLogin()">
                     <i class="fas fa-sign-in-alt"></i> Login
                 </button>
                 
@@ -34,4 +36,67 @@ function createLoginPage() {
             </div>
         </div>
     `;
+}
+
+/**
+ * Handle login button click
+ */
+async function handleLogin() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const errorDiv = document.getElementById('login-error');
+
+    // Clear previous errors
+    errorDiv.style.display = 'none';
+    errorDiv.textContent = '';
+
+    // Validation
+    if (!email || !password) {
+        errorDiv.textContent = '❌ Please enter both email and password';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    if (!email.includes('@')) {
+        errorDiv.textContent = '❌ Please enter a valid email address';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    // Show loading state
+    const loginBtn = event.target;
+    const originalText = loginBtn.innerHTML;
+    loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+    loginBtn.disabled = true;
+
+    try {
+        // Call API
+        const response = await loginUser(email, password);
+
+        // Store user data
+        localStorage.setItem('userId', response.user_id);
+        localStorage.setItem('userEmail', response.email);
+        localStorage.setItem('userName', response.username);
+        
+        // Store JWT token
+        storeJWTToken(response.jwt_token);
+
+        // Show success message
+        alert(`✅ Welcome back, ${response.username}!`);
+
+        // Redirect to home page
+        setTimeout(() => {
+            showPage('homePage');
+        }, 500);
+
+    } catch (error) {
+        errorDiv.textContent = `❌ ${error.message}`;
+        errorDiv.style.display = 'block';
+        console.error('Login failed:', error);
+
+    } finally {
+        // Reset button
+        loginBtn.innerHTML = originalText;
+        loginBtn.disabled = false;
+    }
 }

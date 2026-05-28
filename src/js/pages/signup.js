@@ -1,4 +1,4 @@
-// Sign-Up Page
+// signup.js - UPDATED WITH API INTEGRATION
 
 function createSignupPage() {
     return `
@@ -16,9 +16,16 @@ function createSignupPage() {
                 </div>
                 
                 <div class="form-group">
+                    <label for="signup-username">Username</label>
+                    <input type="text" id="signup-username" class="form-input" placeholder="Choose a username (3-20 characters)">
+                </div>
+                
+                <div class="form-group">
                     <label for="signup-password">Password</label>
-                    <input type="password" id="signup-password" class="form-input" placeholder="Create a password">
-                </div>                <div class="form-group">
+                    <input type="password" id="signup-password" class="form-input" placeholder="Create a password (min 8 chars, 1 uppercase, 1 number)">
+                </div>
+
+                <div class="form-group">
                     <label for="confirm-password">Confirm Password</label>
                     <input type="password" id="confirm-password" class="form-input" placeholder="Re-enter your password">
                 </div>
@@ -31,68 +38,123 @@ function createSignupPage() {
                         <option value="Dublin">Dublin</option>
                     </select>
                 </div>
+
+                <div id="signup-error" class="error-message" style="display: none; color: #EF4444; margin-bottom: 15px; padding: 12px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border-left: 3px solid #EF4444;"></div>
                 
-                <button type="button" class="btn btn-primary" onclick="showPage('verificationPage')">
+                <button type="button" class="btn btn-primary" onclick="handleSignup()">
                     <i class="fas fa-user-plus"></i> Sign Up
                 </button>
                 
                 <button type="button" class="btn btn-secondary" onclick="showPage('loginPage')">
                     <i class="fas fa-arrow-left"></i> Back to Login
                 </button>
-            </div>        </div>
+            </div>
+        </div>
     `;
 }
 
-// Handle signup
-function handleSignup() {
+/**
+ * Handle signup button click
+ */
+async function handleSignup() {
     const email = document.getElementById('signup-email').value.trim();
+    const username = document.getElementById('signup-username').value.trim();
     const password = document.getElementById('signup-password').value.trim();
-    const confirmPassword = document.getElementById('confirm-password').value.trim();    // Validation
+    const confirmPassword = document.getElementById('confirm-password').value.trim();
     const county = document.getElementById('signup-county').value.trim();
-    
-    if (!email || !password || !confirmPassword || !county) {
-        alert('Please fill in all fields');
+    const errorDiv = document.getElementById('signup-error');
+
+    // Clear previous errors
+    errorDiv.style.display = 'none';
+    errorDiv.textContent = '';
+
+    // Validation
+    if (!email || !username || !password || !confirmPassword || !county) {
+        errorDiv.textContent = '❌ Please fill in all fields';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    if (!email.includes('@')) {
+        errorDiv.textContent = '❌ Please enter a valid email address';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    if (username.length < 3 || username.length > 20) {
+        errorDiv.textContent = '❌ Username must be 3-20 characters';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(username)) {
+        errorDiv.textContent = '❌ Username can only contain letters, numbers, and underscores (must start with letter or underscore)';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    if (password.length < 8) {
+        errorDiv.textContent = '❌ Password must be at least 8 characters';
+        errorDiv.style.display = 'block';
         return;
     }
 
     if (password !== confirmPassword) {
-        alert('Passwords do not match');
+        errorDiv.textContent = '❌ Passwords do not match';
+        errorDiv.style.display = 'block';
         return;
     }
 
-    if (password.length < 6) {
-        alert('Password must be at least 6 characters');
+    // Check password strength
+    if (!/[A-Z]/.test(password)) {
+        errorDiv.textContent = '❌ Password must contain at least one uppercase letter';
+        errorDiv.style.display = 'block';
         return;
     }
 
-    // Check if user already exists
-    const allUsers = JSON.parse(localStorage.getItem('allUsers') || '[]');
-    if (allUsers.find(u => u.email === email)) {
-        alert('User already exists with this email');
+    if (!/[0-9]/.test(password)) {
+        errorDiv.textContent = '❌ Password must contain at least one number';
+        errorDiv.style.display = 'block';
         return;
     }
 
-    // Extract name from email (before @)
-    const name = email.split('@')[0].replace(/[._-]/g, ' ').toUpperCase();    // Create new user
-    const newUser = {
-        id: Date.now().toString(),
-        name: name,
-        email: email,
-        password: password, // In production, this should be hashed!
-        county: county,
-        points: 0,
-        team: null,
-        registeredAt: new Date().toISOString()
-    };
+    // Show loading state
+    const signupBtn = event.target;
+    const originalText = signupBtn.innerHTML;
+    signupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating account...';
+    signupBtn.disabled = true;
 
-    // Save user to localStorage
-    allUsers.push(newUser);
-    localStorage.setItem('allUsers', JSON.stringify(allUsers));    // Save current user info
-    localStorage.setItem('userId', newUser.id);
-    localStorage.setItem('userName', newUser.name);
-    localStorage.setItem('userEmail', email);
-    localStorage.setItem('userCounty', county);
+    try {
+        // Call API
+        const response = await registerUser({
+            email: email,
+            username: username,
+            password: password,
+            country_guess: county
+        });
 
-    // Go to verification page
-    showPage('verificationPage');
+        // Store user data
+        localStorage.setItem('userId', response.user_id);
+        localStorage.setItem('userEmail', response.email);
+        localStorage.setItem('userName', response.username);
+        localStorage.setItem('userCounty', county);
+
+        // Show success message
+        alert(`✅ Account created successfully! Welcome, ${response.username}!`);
+
+        // Redirect to allocation page
+        setTimeout(() => {
+            showPage('allocationPage');
+        }, 500);
+
+    } catch (error) {
+        errorDiv.textContent = `❌ ${error.message}`;
+        errorDiv.style.display = 'block';
+        console.error('Signup failed:', error);
+
+    } finally {
+        // Reset button
+        signupBtn.innerHTML = originalText;
+        signupBtn.disabled = false;
+    }
 }
