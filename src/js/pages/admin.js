@@ -1,4 +1,3 @@
-
 // Admin Section
 
 // List of admin emails
@@ -302,19 +301,14 @@ function createAdminPage() {
 
         <!-- Leaderboard Tab -->
         <div id="leaderboard" class="admin-tab-content">
-            <div class="admin-card">
-                <h2><i class="fas fa-trophy"></i> Leaderboard Management</h2>
+            <div class="admin-card">                <h2><i class="fas fa-trophy"></i> Leaderboard Management</h2>
                 <p class="admin-subtitle">Manage and recalculate leaderboards</p>
                 
                 <div class="leaderboard-actions">
-                    <button class="admin-button" onclick="recalculateLeaderboard()">
-                        <i class="fas fa-sync"></i> Recalculate Leaderboard
-                    </button>
-                    <button class="admin-button" style="background: linear-gradient(135deg, #EF4444, #dc2626);" onclick="resetAllPoints()">
-                        <i class="fas fa-exclamation-triangle"></i> Reset All Points
+                    <button class="admin-button" onclick="recalculatePoints()">
+                        <i class="fas fa-sync"></i> Recalculate Points
                     </button>
                 </div>
-
                 <div class="leaderboard-info">
                     <div class="info-card">
                         <h4>Total Users</h4>
@@ -458,10 +452,35 @@ function submitMatchScore() {
     // Here you would send the data to your backend
 }
 
-// Recalculate leaderboard
-function recalculateLeaderboard() {
-    alert('Leaderboard recalculated! All user points have been updated.');
-    // Here you would call your backend API to recalculate
+// Recalculate points (TEMPORARY TEST VERSION)
+function recalculatePoints() {
+    // Show loading state
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Recalculating...';
+    button.disabled = true;
+
+    // Simulate backend processing with a 2-second delay
+    setTimeout(() => {
+        // Get all users from localStorage
+        const allUsers = JSON.parse(localStorage.getItem('allUsers') || '[]');
+        
+        // Simulate recalculating points (add random bonus points for testing)
+        allUsers.forEach(user => {
+            const bonusPoints = Math.floor(Math.random() * 50) + 10; // Random 10-60 points
+            user.points = (user.points || 0) + bonusPoints;
+        });
+
+        // Save updated users back to localStorage
+        localStorage.setItem('allUsers', JSON.stringify(allUsers));
+
+        // Reset button
+        button.innerHTML = originalText;
+        button.disabled = false;
+
+        // Show success message
+        alert('✅ Points recalculated successfully!\n\nAll users have been awarded bonus points.\n\nNote: This is a temporary test version. Replace with actual backend API when ready.');
+    }, 2000);
 }
 
 // Reset all points

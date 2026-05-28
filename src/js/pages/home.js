@@ -27,17 +27,15 @@ function createHomePage() {
                     <i class="fas fa-shield-alt"></i>
                 </button>
             </div>
-        </div>
-
-        <div class="my-points-card fadeInUp">
+        </div>        <div class="my-points-card fadeInUp">
             <div class="my-points-stats">
                 <div class="points-stat">
                     <div class="points-stat-label">My Points</div>
-                    <div class="points-stat-value">598</div>
+                    <div class="points-stat-value">${getUserPoints()}</div>
                 </div>
                 <div class="points-stat">
                     <div class="points-stat-label">Position</div>
-                    <div class="position-value">15th</div>
+                    <div class="position-value">${getUserPosition()}</div>
                 </div>
             </div>
             <button class="btn-history" onclick="openHistory()">
@@ -111,14 +109,9 @@ function createHomePage() {
                         <span class="leaderboard-score">632</span>
                     </li>
                 </ul>
-                <div style="margin: 20px 0; text-align: center; color: rgba(255, 255, 255, 0.5); font-size: 1rem; letter-spacing: 8px;">• • •</div>
-                <div style="margin-bottom: 10px; padding-left: 12px; color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Your Position:</div>
+                <div style="margin: 20px 0; text-align: center; color: rgba(255, 255, 255, 0.5); font-size: 1rem; letter-spacing: 8px;">• • •</div>                <div style="margin-bottom: 10px; padding-left: 12px; color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Your Position:</div>
                 <ul class="leaderboard-list">
-                    <li class="leaderboard-item user-highlight">
-                        <span class="leaderboard-rank">15</span>
-                        <span>Sarah Connolly <span class="user-badge">YOU</span></span>
-                        <span class="leaderboard-score" style="background: linear-gradient(135deg, #FF8C00, #FFA500);">598</span>
-                    </li>
+                    ${generateUserPositionHTML()}
                 </ul>
             </div>
 
@@ -227,7 +220,65 @@ function createHomePage() {
                         <span class="bar-label">Cork</span>
                     </div>
                 </div>
-            </div>
-        </div>
+            </div>        </div>
+    `;
+}
+
+// Helper function to get user points
+function getUserPoints() {
+    const userId = localStorage.getItem('userId');
+    const allUsers = JSON.parse(localStorage.getItem('allUsers') || '[]');
+    const user = allUsers.find(u => u.id === userId);
+    return user ? user.points : 0;
+}
+
+// Helper function to get user position
+function getUserPosition() {
+    const userId = localStorage.getItem('userId');
+    const allUsers = JSON.parse(localStorage.getItem('allUsers') || '[]');
+    const sortedUsers = allUsers.sort((a, b) => b.points - a.points);
+    const position = sortedUsers.findIndex(u => u.id === userId) + 1;
+    return getOrdinalSuffix(position);
+}
+
+// Helper function to convert number to ordinal (1st, 2nd, 3rd, etc.)
+function getOrdinalSuffix(num) {
+    const j = num % 10;
+    const k = num % 100;
+    if (j === 1 && k !== 11) return num + 'st';
+    if (j === 2 && k !== 12) return num + 'nd';
+    if (j === 3 && k !== 13) return num + 'rd';
+    return num + 'th';
+}
+
+// Helper function to generate leaderboard HTML
+function generateLeaderboardHTML() {
+    const allUsers = JSON.parse(localStorage.getItem('allUsers') || '[]');
+    const sortedUsers = allUsers.sort((a, b) => b.points - a.points).slice(0, 10);
+    
+    return sortedUsers.map((user, index) => `
+        <li class="leaderboard-item">
+            <span class="leaderboard-rank">${index + 1}</span>
+            <span>${user.name}</span>
+            <span class="leaderboard-score">${user.points}</span>
+        </li>
+    `).join('');
+}
+
+// Helper function to generate user position HTML
+function generateUserPositionHTML() {
+    const userId = localStorage.getItem('userId');
+    const userName = localStorage.getItem('userName');
+    const allUsers = JSON.parse(localStorage.getItem('allUsers') || '[]');
+    const sortedUsers = allUsers.sort((a, b) => b.points - a.points);
+    const position = sortedUsers.findIndex(u => u.id === userId) + 1;
+    const userPoints = getUserPoints();
+    
+    return `
+        <li class="leaderboard-item user-highlight">
+            <span class="leaderboard-rank">${position}</span>
+            <span>${userName} <span class="user-badge">YOU</span></span>
+            <span class="leaderboard-score" style="background: linear-gradient(135deg, #FF8C00, #FFA500);">${userPoints}</span>
+        </li>
     `;
 }
