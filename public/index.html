@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="src/js/api.js"></script>
+    <!-- API Service Layer (MUST BE FIRST) -->
+    <script src="../src/js/api.js"></script>
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>World Cup Prediction Game - Deloitte</title>
@@ -38,9 +40,15 @@
     <!-- App Container -->
     <div id="app"></div>
 
-    <!-- Scripts -->
+    <!-- Scripts (CORRECT ORDER) -->
+    <!-- API must be loaded first -->
+    <!-- (api.js already loaded in head) -->
+    
+    <!-- Utilities -->
     <script src="../src/js/utils/helpers.js"></script>
     <script src="../src/js/utils/navigation.js"></script>
+    
+    <!-- Page Generators -->
     <script src="../src/js/pages/login.js"></script>
     <script src="../src/js/pages/signup.js"></script>
     <script src="../src/js/pages/verification.js"></script>
@@ -51,6 +59,8 @@
     <script src="../src/js/pages/tournamentwinner.js"></script>
     <script src="../src/js/pages/goldenboot.js"></script>
     <script src="../src/js/pages/goldenglove.js"></script>
+    
+    <!-- Main App -->
     <script src="../src/js/main.js"></script>
 </body>
 </html>

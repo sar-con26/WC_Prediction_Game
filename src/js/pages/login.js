@@ -1,4 +1,4 @@
-// login.js - UPDATED WITH API INTEGRATION
+// Login Page
 
 function createLoginPage() {
     return `
@@ -20,9 +20,7 @@ function createLoginPage() {
                     <input type="password" id="password" class="form-input" placeholder="Enter your password">
                 </div>
                 
-                <div id="login-error" class="error-message" style="display: none; color: #EF4444; margin-bottom: 15px; padding: 12px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border-left: 3px solid #EF4444;"></div>
-                
-                <button type="button" class="btn btn-primary" onclick="handleLogin()">
+                <button type="button" class="btn btn-primary" id="loginBtn" onclick="handleLogin(this)">
                     <i class="fas fa-sign-in-alt"></i> Login
                 </button>
                 
@@ -38,65 +36,63 @@ function createLoginPage() {
     `;
 }
 
-/**
- * Handle login button click
- */
-async function handleLogin() {
+// Handle login
+async function handleLogin(button) {
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value.trim();
-    const errorDiv = document.getElementById('login-error');
-
-    // Clear previous errors
-    errorDiv.style.display = 'none';
-    errorDiv.textContent = '';
-
+    
     // Validation
     if (!email || !password) {
-        errorDiv.textContent = '❌ Please enter both email and password';
-        errorDiv.style.display = 'block';
+        alert('Please fill in all fields');
         return;
     }
 
     if (!email.includes('@')) {
-        errorDiv.textContent = '❌ Please enter a valid email address';
-        errorDiv.style.display = 'block';
+        alert('Please enter a valid email');
         return;
     }
 
-    // Show loading state
-    const loginBtn = event.target;
-    const originalText = loginBtn.innerHTML;
-    loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
-    loginBtn.disabled = true;
+    if (password.length < 8) {
+        alert('Password must be at least 8 characters');
+        return;
+    }
 
     try {
+        // Show loading state
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+        button.disabled = true;
+
+        console.log('Calling loginUser with email:', email);
+
         // Call API
         const response = await loginUser(email, password);
 
+        console.log('Login response:', response);
+
         // Store user data
         localStorage.setItem('userId', response.user_id);
-        localStorage.setItem('userEmail', response.email);
         localStorage.setItem('userName', response.username);
-        
-        // Store JWT token
-        storeJWTToken(response.jwt_token);
+        localStorage.setItem('userEmail', response.email);
+        localStorage.setItem('jwt_token', response.jwt_token);
+
+        // Reset button
+        button.innerHTML = originalText;
+        button.disabled = false;
 
         // Show success message
-        alert(`✅ Welcome back, ${response.username}!`);
+        alert(`✅ Login successful!\nWelcome back, ${response.username}!`);
 
-        // Redirect to home page
-        setTimeout(() => {
-            showPage('homePage');
-        }, 500);
+        // Navigate to home page
+        showPage('homePage');
 
     } catch (error) {
-        errorDiv.textContent = `❌ ${error.message}`;
-        errorDiv.style.display = 'block';
-        console.error('Login failed:', error);
-
-    } finally {
         // Reset button
-        loginBtn.innerHTML = originalText;
-        loginBtn.disabled = false;
+        button.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
+        button.disabled = false;
+
+        // Show error message
+        console.error('Login error:', error);
+        alert(`❌ Login failed: ${error.message}`);
     }
 }
