@@ -16,6 +16,11 @@ function createSignupPage() {
                 </div>
                 
                 <div class="form-group">
+                    <label for="signup-username">Username</label>
+                    <input type="text" id="signup-username" class="form-input" placeholder="Choose a username (3-20 chars)">
+                </div>
+                
+                <div class="form-group">
                     <label for="signup-password">Password</label>
                     <input type="password" id="signup-password" class="form-input" placeholder="Create a password">
                 </div>
@@ -26,11 +31,19 @@ function createSignupPage() {
                 </div>
                 
                 <div class="form-group">
-                    <label for="signup-county">County</label>
-                    <select id="signup-county" class="form-input" style="background-color: #3a3a3a; color: white;">
-                        <option value="">Select your county</option>
-                        <option value="Cork">Cork</option>
-                        <option value="Dublin">Dublin</option>
+                    <label for="signup-country">Country Guess</label>
+                    <select id="signup-country" class="form-input" style="background-color: #3a3a3a; color: white;">
+                        <option value="">Select your country</option>
+                        <option value="France">🇫🇷 France</option>
+                        <option value="Brazil">🇧🇷 Brazil</option>
+                        <option value="Argentina">🇦🇷 Argentina</option>
+                        <option value="Spain">🇪🇸 Spain</option>
+                        <option value="Germany">🇩🇪 Germany</option>
+                        <option value="England">🇬🇧 England</option>
+                        <option value="Netherlands">🇳🇱 Netherlands</option>
+                        <option value="Belgium">🇧🇪 Belgium</option>
+                        <option value="Portugal">🇵🇹 Portugal</option>
+                        <option value="Italy">🇮🇹 Italy</option>
                     </select>
                 </div>
                 
@@ -49,18 +62,24 @@ function createSignupPage() {
 // Handle signup
 async function handleSignup() {
     const email = document.getElementById('signup-email').value.trim();
+    const username = document.getElementById('signup-username').value.trim();
     const password = document.getElementById('signup-password').value.trim();
     const confirmPassword = document.getElementById('confirm-password').value.trim();
-    const county = document.getElementById('signup-county').value.trim();
+    const country_guess = document.getElementById('signup-country').value.trim();
     
     // Validation
-    if (!email || !password || !confirmPassword || !county) {
+    if (!email || !username || !password || !confirmPassword || !country_guess) {
         alert('Please fill in all fields');
         return;
     }
 
     if (!email.includes('@')) {
         alert('Please enter a valid email');
+        return;
+    }
+
+    if (username.length < 3 || username.length > 20) {
+        alert('Username must be 3-20 characters');
         return;
     }
 
@@ -94,16 +113,16 @@ async function handleSignup() {
         // Call API
         const response = await registerUser({
             email: email,
-            username: email.split('@')[0], // Use email prefix as username
+            username: username,
             password: password,
-            country_guess: county
+            country_guess: country_guess
         });
 
         // Store user data
         localStorage.setItem('userId', response.user_id);
         localStorage.setItem('userName', response.username);
         localStorage.setItem('userEmail', response.email);
-        localStorage.setItem('userCounty', county);
+        localStorage.setItem('userCountry', country_guess);
 
         // Reset button
         button.innerHTML = originalText;

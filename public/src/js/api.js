@@ -1,7 +1,16 @@
 // api.js
 // API Service for communicating with Flask backend
 
-const API_BASE_URL = 'http://localhost:5000/api'; // Change to your Flask URL in production
+// Determine API base URL dynamically
+const API_BASE_URL = (() => {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:5000/api';
+    } else {
+        return `${window.location.protocol}//${window.location.host}/api`;
+    }
+})();
+
+console.log('🔗 API Base URL:', API_BASE_URL);
 
 /**
  * Register a new user
@@ -10,6 +19,8 @@ const API_BASE_URL = 'http://localhost:5000/api'; // Change to your Flask URL in
  */
 async function registerUser(userData) {
     try {
+        console.log('📤 Registering user:', userData.email);
+        
         const response = await fetch(`${API_BASE_URL}/register`, {
             method: 'POST',
             headers: {
@@ -23,7 +34,10 @@ async function registerUser(userData) {
             })
         });
 
+        console.log('📥 Registration response status:', response.status);
+        
         const data = await response.json();
+        console.log('📥 Registration response data:', data);
 
         if (!response.ok) {
             throw new Error(data.message || 'Registration failed');
@@ -31,7 +45,7 @@ async function registerUser(userData) {
 
         return data;
     } catch (error) {
-        console.error('Registration error:', error);
+        console.error('❌ Registration error:', error);
         throw error;
     }
 }
@@ -44,6 +58,8 @@ async function registerUser(userData) {
  */
 async function loginUser(email, password) {
     try {
+        console.log('📤 Logging in user:', email);
+        
         const response = await fetch(`${API_BASE_URL}/login`, {
             method: 'POST',
             headers: {
@@ -55,7 +71,10 @@ async function loginUser(email, password) {
             })
         });
 
+        console.log('📥 Login response status:', response.status);
+        
         const data = await response.json();
+        console.log('📥 Login response data:', data);
 
         if (!response.ok) {
             throw new Error(data.message || 'Login failed');
@@ -63,7 +82,7 @@ async function loginUser(email, password) {
 
         return data;
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('❌ Login error:', error);
         throw error;
     }
 }
@@ -74,6 +93,7 @@ async function loginUser(email, password) {
  */
 function storeJWTToken(token) {
     localStorage.setItem('jwt_token', token);
+    console.log('✅ JWT token stored');
 }
 
 /**
@@ -89,7 +109,9 @@ function getJWTToken() {
  * @returns {boolean} True if user has valid token
  */
 function isAuthenticated() {
-    return !!getJWTToken();
+    const token = getJWTToken();
+    console.log('🔐 Authentication check:', !!token);
+    return !!token;
 }
 
 /**
@@ -100,10 +122,11 @@ function logoutUser() {
     localStorage.removeItem('userId');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userName');
-    localStorage.removeItem('userCounty');
+    localStorage.removeItem('userCountry');
     localStorage.removeItem('assignedTeam');
     localStorage.removeItem('predictions');
     localStorage.removeItem('predictionState');
+    console.log('✅ User logged out');
 }
 
 /**
@@ -117,3 +140,35 @@ function getAuthHeaders() {
         'Authorization': `Bearer ${token}`
     };
 }
+
+/**
+ * Health check - verify backend is running
+ * @returns {Promise} Response from server
+ */
+async function healthCheck() {
+    try {
+        console.log('🏥 Performing health check...');
+        
+        const response = await fetch(`${API_BASE_URL}/health`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        const data = await response.json();
+        console.log('✅ Health check passed:', data);
+        return data;
+    } catch (error) {
+        console.error('❌ Health check failed:', error);
+        throw error;
+    }
+}
+
+// Perform health check on page load
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 App initialized, checking backend health...');
+    healthCheck().catch(error => {
+        console.warn('⚠️ Backend health check failed:', error.message);
+    });
+});
