@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 # Get Lambda URLs from environment
 LAMBDA_REGISTRATION_URL = os.getenv('LAMBDA_REGISTRATION_URL')
 LAMBDA_LOGIN_URL = os.getenv('LAMBDA_LOGIN_URL')
+LAMBDA_TEAM_ASSIGNMENT_URL = os.getenv('LAMBDA_TEAM_ASSIGNMENT_URL')
 
 # Log startup
 logger.info("=" * 60)
@@ -40,6 +41,7 @@ logger.info(f"Public Directory Exists: {os.path.exists(PUBLIC_DIR)}")
 logger.info(f"Index.html Exists: {os.path.exists(os.path.join(PUBLIC_DIR, 'index.html'))}")
 logger.info(f"Registration Lambda URL: {LAMBDA_REGISTRATION_URL}")
 logger.info(f"Login Lambda URL: {LAMBDA_LOGIN_URL}")
+logger.info(f"Team Assignment Lambda URL: {LAMBDA_TEAM_ASSIGNMENT_URL}")
 logger.info("=" * 60)
 
 
@@ -102,8 +104,9 @@ def register():
         logger.info(f"[REGISTER] Request data: {data}")
         
         # Validate required fields
-        if not data or not all(k in data for k in ['email', 'username', 'password', 'country_guess']):
+        if not data or not all(k in data for k in ['email', 'username', 'password', 'office_location']):
             logger.error("[REGISTER] Missing required fields")
+            logger.error(f"[REGISTER] Received fields: {list(data.keys()) if data else 'None'}")
             return jsonify({
                 'status': 'error',
                 'message': 'Missing required fields'
@@ -115,11 +118,12 @@ def register():
                 'email': data.get('email'),
                 'username': data.get('username'),
                 'password': data.get('password'),
-                'country_guess': data.get('country_guess')
+                'office_location': data.get('office_location')
             })
         }
         
         logger.info(f"[REGISTER] Forwarding to Lambda: {LAMBDA_REGISTRATION_URL}")
+        logger.info(f"[REGISTER] Lambda event: {lambda_event}")
         
         try:
             response = requests.post(
@@ -255,6 +259,93 @@ def login():
     
     except Exception as e:
         logger.error(f"[LOGIN] Unexpected error: {str(e)}", exc_info=True)
+        return jsonify({
+            'status': 'error',
+            'message': 'Internal server error'
+        }), 500
+
+
+@app.route('/api/team-assignment', methods=['POST'])
+def team_assignment():
+    """Forward team assignment request to Lambda"""
+    try:
+        logger.info("[TEAM_ASSIGNMENT] Team assignment request received")
+        
+        # Get request data
+        data = request.get_json()
+        logger.info(f"[TEAM_ASSIGNMENT] Request data: {data}")
+        
+        # Validate required fields
+        if not data or not all(k in data for k in ['user_id', 'jwt_token']):
+            logger.error("[TEAM_ASSIGNMENT] Missing required fields")
+            return jsonify({
+                'status': 'error',
+                'message': 'Missing required fields'
+            }), 400
+        
+        # Create Lambda event format
+        lambda_event = {
+            'body': json.dumps({
+                'action': data.get('action', 'assign_team'),
+                'user_id': data.get('user_id'),
+                'jwt_token': data.get('jwt_token'),
+                'country': data.get('country'),
+                'player_name': data.get('player_name')
+            })
+        }
+        
+        logger.info(f"[TEAM_ASSIGNMENT] Forwarding to Lambda: {LAMBDA_TEAM_ASSIGNMENT_URL}")
+        
+        try:
+            response = requests.post(
+                LAMBDA_TEAM_ASSIGNMENT_URL,
+                json=lambda_event,
+                timeout=30
+            )
+            
+            logger.info(f"[TEAM_ASSIGNMENT] Lambda response status: {response.status_code}")
+            logger.info(f"[TEAM_ASSIGNMENT] Lambda response: {response.text}")
+            
+            # Parse Lambda response
+            lambda_response = response.json()
+            
+            # Lambda returns wrapped response, extract the actual response
+            if 'body' in lambda_response:
+                try:
+                    actual_response = json.loads(lambda_response['body'])
+                    status_code = lambda_response.get('statusCode', 200)
+                    return actual_response, status_code
+                except json.JSONDecodeError:
+                    return lambda_response, response.status_code
+            else:
+                return lambda_response, response.status_code
+            
+        except requests.exceptions.Timeout:
+            logger.error("[TEAM_ASSIGNMENT] Lambda request timed out (30 seconds)")
+            return jsonify({
+                'status': 'error',
+                'message': 'Lambda request timed out',
+                'error_code': 'TIMEOUT'
+            }), 504
+            
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"[TEAM_ASSIGNMENT] Cannot connect to Lambda: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': 'Cannot connect to Lambda',
+                'error_code': 'CONNECTION_ERROR'
+            }), 503
+            
+        except Exception as e:
+            logger.error(f"[TEAM_ASSIGNMENT] Lambda request failed: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': 'Lambda request failed',
+                'error_code': 'LAMBDA_ERROR'
+            }), 500
+    
+    except Exception as e:
+        logger.error(f"[TEAM_ASSIGNMENT] Unexpected error: {str(e)}", exc_info=True)
         return jsonify({
             'status': 'error',
             'message': 'Internal server error'

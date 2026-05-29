@@ -1,4 +1,4 @@
-// Tournament Winner Prediction Page
+// Tournament Winner Prediction Page - CORRECTED
 
 function createTournamentWinnerPage() {
     const teams = [
@@ -72,7 +72,7 @@ function createTournamentWinnerPage() {
     return `
         <div class="prediction-page fadeInUp">
             <div class="prediction-header">
-                <button class="back-button" onclick="showPage('allocationPage')">
+                <button class="back-button" onclick="goBackToPreviousPage()">
                     <i class="fas fa-arrow-left"></i> Back
                 </button>
                 <h1>Tournament Winner</h1>
@@ -98,7 +98,7 @@ function createTournamentWinnerPage() {
                 </div>
 
                 <div class="prediction-actions">
-                    <button class="btn btn-primary" onclick="submitTournamentWinner()">
+                    <button class="btn btn-primary" onclick="submitTournamentWinner(this)">
                         <i class="fas fa-arrow-right"></i> Continue
                     </button>
                 </div>
@@ -107,7 +107,7 @@ function createTournamentWinnerPage() {
     `;
 }
 
-function submitTournamentWinner() {
+async function submitTournamentWinner(button) {
     const selection = document.getElementById('tournament-winner').value;
 
     if (!selection) {
@@ -115,29 +115,79 @@ function submitTournamentWinner() {
         return;
     }
 
-    // Save to localStorage
-    const predictions = JSON.parse(localStorage.getItem('predictions') || '{}');
-    predictions.tournamentWinner = selection;
-    localStorage.setItem('predictions', JSON.stringify(predictions));
+    try {
+        // Show loading state
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        button.disabled = true;
 
-    // Update prediction state
-    const predictionState = JSON.parse(localStorage.getItem('predictionState') || '{}');
-    predictionState.predictions.tournamentWinner = true;
-    predictionState.completedAt.tournamentWinner = new Date().toISOString();
-    localStorage.setItem('predictionState', JSON.stringify(predictionState));
+        const userId = localStorage.getItem('userId');
+        const jwtToken = localStorage.getItem('jwt_token');
 
-    // Navigate to golden boot page directly
-    const goldenBootPage = document.getElementById('goldenBootPage');
-    if (goldenBootPage) {
-        // Hide all pages
-        document.querySelectorAll('.page').forEach(page => {
-            page.classList.remove('active');
-            page.style.display = 'none';
+        console.log('Saving tournament winner prediction:', {
+            userId: userId,
+            country: selection,
+            jwtToken: jwtToken ? 'present' : 'missing'
         });
-        
-        // Show golden boot page
-        goldenBootPage.innerHTML = createGoldenBootPage();
-        goldenBootPage.classList.add('active');
-        goldenBootPage.style.display = 'block';
+
+        // Call Lambda to save prediction
+        const response = await fetch('/api/team-assignment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${jwtToken}`
+            },
+            body: JSON.stringify({
+                action: 'predict_tournament_winner',
+                user_id: parseInt(userId),
+                jwt_token: jwtToken,
+                country: selection
+            })
+        });
+
+        const data = await response.json();
+        console.log('Tournament winner prediction response:', data);
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Prediction save failed');
+        }
+
+        // Save to localStorage
+        const predictions = JSON.parse(localStorage.getItem('predictions') || '{}');
+        predictions.tournamentWinner = selection;
+        localStorage.setItem('predictions', JSON.stringify(predictions));
+
+        // Update prediction state
+        const predictionState = JSON.parse(localStorage.getItem('predictionState') || '{}');
+        predictionState.predictions.tournamentWinner = true;
+        predictionState.completedAt.tournamentWinner = new Date().toISOString();
+        localStorage.setItem('predictionState', JSON.stringify(predictionState));
+
+        // Reset button
+        button.innerHTML = originalText;
+        button.disabled = false;
+
+        // Navigate to golden boot page
+        const goldenBootPage = document.getElementById('goldenBootPage');
+        if (goldenBootPage) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+                page.style.display = 'none';
+            });
+            
+            // Show golden boot page
+            goldenBootPage.innerHTML = createGoldenBootPage();
+            goldenBootPage.classList.add('active');
+            goldenBootPage.style.display = 'block';
+        }
+
+    } catch (error) {
+        // Reset button
+        button.innerHTML = '<i class="fas fa-arrow-right"></i> Continue';
+        button.disabled = false;
+
+        console.error('Tournament winner prediction error:', error);
+        alert(`Error saving prediction: ${error.message}`);
     }
 }

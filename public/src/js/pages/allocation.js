@@ -1,93 +1,90 @@
-// Country Allocation Page
+// Country Allocation Page - FIXED to use actual Lambda response
 
 function createAllocationPage() {
-    // All 48 World Cup 2026 Teams
-    const allTeams = [
-        // CONCACAF (6)
-        { name: 'United States', flag: '🇺🇸' },
-        { name: 'Mexico', flag: '🇲🇽' },
-        { name: 'Canada', flag: '🇨🇦' },
-        { name: 'Curaçao', flag: '🇨🇼' },
-        { name: 'Haiti', flag: '🇭🇹' },
-        { name: 'Panama', flag: '🇵🇦' },
-        
-        // CONMEBOL (6)
-        { name: 'Argentina', flag: '🇦🇷' },
-        { name: 'Brazil', flag: '🇧🇷' },
-        { name: 'Colombia', flag: '🇨🇴' },
-        { name: 'Ecuador', flag: '🇪🇨' },
-        { name: 'Paraguay', flag: '🇵🇾' },
-        { name: 'Uruguay', flag: '🇺🇾' },
-        
-        // UEFA (16)
-        { name: 'Austria', flag: '🇦🇹' },
-        { name: 'Belgium', flag: '🇧🇪' },
-        { name: 'Bosnia and Herzegovina', flag: '🇧🇦' },
-        { name: 'Croatia', flag: '🇭🇷' },
-        { name: 'Czechia', flag: '🇨🇿' },
-        { name: 'England', flag: '🇬🇧' },
-        { name: 'France', flag: '🇫🇷' },
-        { name: 'Germany', flag: '🇩🇪' },
-        { name: 'Netherlands', flag: '🇳🇱' },
-        { name: 'Norway', flag: '🇳🇴' },
-        { name: 'Portugal', flag: '🇵🇹' },
-        { name: 'Scotland', flag: '🇬🇧' },
-        { name: 'Spain', flag: '🇪🇸' },
-        { name: 'Sweden', flag: '🇸🇪' },
-        { name: 'Switzerland', flag: '🇨🇭' },
-        { name: 'Türkiye', flag: '🇹🇷' },
-        
-        // AFC (9)
-        { name: 'Australia', flag: '🇦🇺' },
-        { name: 'Iraq', flag: '🇮🇶' },
-        { name: 'IR Iran', flag: '🇮🇷' },
-        { name: 'Japan', flag: '🇯🇵' },
-        { name: 'Jordan', flag: '🇯🇴' },
-        { name: 'Korea Republic', flag: '🇰🇷' },
-        { name: 'Qatar', flag: '🇶🇦' },
-        { name: 'Saudi Arabia', flag: '🇸🇦' },
-        { name: 'Uzbekistan', flag: '🇺🇿' },
-        
-        // CAF (10)
-        { name: 'Algeria', flag: '🇩🇿' },
-        { name: 'Cabo Verde', flag: '🇨🇻' },
-        { name: 'Congo DR', flag: '🇨🇩' },
-        { name: 'Côte d\'Ivoire', flag: '🇨🇮' },
-        { name: 'Egypt', flag: '🇪🇬' },
-        { name: 'Ghana', flag: '🇬🇭' },
-        { name: 'Morocco', flag: '🇲🇦' },
-        { name: 'Senegal', flag: '🇸🇳' },
-        { name: 'South Africa', flag: '🇿🇦' },
-        { name: 'Tunisia', flag: '🇹🇳' },
-        
-        // OFC (1)
-        { name: 'New Zealand', flag: '🇳🇿' }
-    ];
-    
-    // Function to get random team
-    function getRandomTeam() {
-        const randomIndex = Math.floor(Math.random() * allTeams.length);
-        return allTeams[randomIndex];
-    }
-    
-    // Get random team for this user
-    const assignedTeam = getRandomTeam();
-    
-    // Save to localStorage
-    localStorage.setItem('assignedTeam', JSON.stringify(assignedTeam));
-    
     return `
         <div class="allocation-overlay">
             <div class="allocation-popup popupAppear">
-                <h2>🎉 Congratulations! 🎉</h2>
-                <div class="country-name countryReveal">${assignedTeam.flag} ${assignedTeam.name}</div>
-                <p class="allocation-message">You've been assigned ${assignedTeam.name} for the sweepstake! Good luck with your predictions!</p>
-                <button class="btn btn-primary" onclick="initPredictionFlow()">
+                <h2>🎉 Assigning Your Team... 🎉</h2>
+                <div class="country-name countryReveal" id="teamDisplay">Loading...</div>
+                <p class="allocation-message" id="allocationMessage">Getting your sweepstake team...</p>
+                <button class="btn btn-primary" id="continueBtn" onclick="initPredictionFlow()" style="display: none;">
                     Continue to App <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
         </div>
     `;
+}
+
+// Call team assignment Lambda when page loads
+async function assignTeamOnLoad() {
+    try {
+        const userId = localStorage.getItem('userId');
+        const jwtToken = localStorage.getItem('jwt_token');
+        
+        if (!userId || !jwtToken) {
+            alert('Error: User not authenticated');
+            showPage('loginPage');
+            return;
+        }
+        
+        console.log('Assigning team for user:', userId);
+        
+        // Call Flask endpoint to assign team
+        const response = await fetch('/api/team-assignment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'assign_team',
+                user_id: parseInt(userId),
+                jwt_token: jwtToken
+            })
+        });
+        
+        const data = await response.json();
+        console.log('Team assignment response:', data);
+        
+        if (data.status === 'success') {
+            // Get the assigned team name from Lambda response
+            const assignedTeamName = data.assigned_team;
+            
+            // Store in window variable for allocation page to use
+            window.assignedTeamName = assignedTeamName;
+            
+            // Update the display
+            const teamDisplay = document.getElementById('teamDisplay');
+            const allocationMessage = document.getElementById('allocationMessage');
+            const continueBtn = document.getElementById('continueBtn');
+            
+            if (teamDisplay) {
+                teamDisplay.textContent = `⚽ ${assignedTeamName}`;
+            }
+            
+            if (allocationMessage) {
+                allocationMessage.textContent = `You've been assigned ${assignedTeamName} for the sweepstake! Good luck with your predictions!`;
+            }
+            
+            if (continueBtn) {
+                continueBtn.style.display = 'block';
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('assignedTeam', JSON.stringify({
+                name: assignedTeamName,
+                flag: '⚽'
+            }));
+            
+        } else {
+            alert('Error assigning team: ' + (data.message || 'Unknown error'));
+            showPage('loginPage');
+        }
+        
+    } catch (error) {
+        console.error('Error assigning team:', error);
+        alert('Error assigning team: ' + error.message);
+        showPage('loginPage');
+    }
 }
 
 function initPredictionFlow() {
@@ -113,3 +110,16 @@ function initPredictionFlow() {
         showPage('tournamentWinnerPage');
     }, 1500);
 }
+
+// Auto-assign team when page is shown
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if we're on allocation page and assign team
+    const observer = new MutationObserver(function(mutations) {
+        const allocationPage = document.getElementById('allocationPage');
+        if (allocationPage && allocationPage.classList.contains('active')) {
+            assignTeamOnLoad();
+        }
+    });
+    
+    observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+});

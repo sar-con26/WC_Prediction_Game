@@ -1,4 +1,4 @@
-// Golden Glove Prediction Page
+// Golden Glove Prediction Page - CORRECTED
 
 function createGoldenGlovePage() {
     return `
@@ -40,7 +40,7 @@ function createGoldenGlovePage() {
                 </div>
 
                 <div class="prediction-actions">
-                    <button class="btn btn-primary" onclick="submitGoldenGloveDirect()">
+                    <button class="btn btn-primary" onclick="submitGoldenGlove(this)">
                         <i class="fas fa-check-circle"></i> Complete
                     </button>
                 </div>
@@ -49,7 +49,7 @@ function createGoldenGlovePage() {
     `;
 }
 
-function submitGoldenGloveDirect() {
+async function submitGoldenGlove(button) {
     const gloveInput = document.getElementById('golden-glove');
     
     if (!gloveInput) {
@@ -69,33 +69,83 @@ function submitGoldenGloveDirect() {
         return;
     }
 
-    // Save to localStorage
-    const predictions = JSON.parse(localStorage.getItem('predictions') || '{}');
-    predictions.goldenGlove = goalkeeperName;
-    localStorage.setItem('predictions', JSON.stringify(predictions));
+    try {
+        // Show loading state
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        button.disabled = true;
 
-    // Update prediction state
-    const predictionState = JSON.parse(localStorage.getItem('predictionState') || '{}');
-    predictionState.predictions.goldenGlove = true;
-    predictionState.completedAt.goldenGlove = new Date().toISOString();
-    predictionState.allPredictionsComplete = true;
-    localStorage.setItem('predictionState', JSON.stringify(predictionState));
+        const userId = localStorage.getItem('userId');
+        const jwtToken = localStorage.getItem('jwt_token');
 
-    // Navigate to homepage
-    const homePage = document.getElementById('homePage');
-    if (homePage) {
-        // Hide all pages
-        document.querySelectorAll('.page').forEach(page => {
-            page.classList.remove('active');
-            page.style.display = 'none';
+        console.log('Saving golden glove prediction:', {
+            userId: userId,
+            playerName: goalkeeperName,
+            jwtToken: jwtToken ? 'present' : 'missing'
         });
-        
-        // Show home page
-        homePage.innerHTML = createHomePage();
-        homePage.classList.add('active');
-        homePage.style.display = 'block';
-    } else {
-        alert('Error: Homepage not found');
+
+        // Call Lambda to save prediction
+        const response = await fetch('/api/team-assignment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${jwtToken}`
+            },
+            body: JSON.stringify({
+                action: 'predict_golden_glove',
+                user_id: parseInt(userId),
+                jwt_token: jwtToken,
+                player_name: goalkeeperName
+            })
+        });
+
+        const data = await response.json();
+        console.log('Golden glove prediction response:', data);
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Prediction save failed');
+        }
+
+        // Save to localStorage
+        const predictions = JSON.parse(localStorage.getItem('predictions') || '{}');
+        predictions.goldenGlove = goalkeeperName;
+        localStorage.setItem('predictions', JSON.stringify(predictions));
+
+        // Update prediction state
+        const predictionState = JSON.parse(localStorage.getItem('predictionState') || '{}');
+        predictionState.predictions.goldenGlove = true;
+        predictionState.completedAt.goldenGlove = new Date().toISOString();
+        predictionState.allPredictionsComplete = true;
+        localStorage.setItem('predictionState', JSON.stringify(predictionState));
+
+        // Reset button
+        button.innerHTML = originalText;
+        button.disabled = false;
+
+        // Navigate to homepage
+        const homePage = document.getElementById('homePage');
+        if (homePage) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+                page.style.display = 'none';
+            });
+            
+            // Show home page
+            homePage.innerHTML = createHomePage();
+            homePage.classList.add('active');
+            homePage.style.display = 'block';
+        } else {
+            alert('Error: Homepage not found');
+        }
+
+    } catch (error) {
+        // Reset button
+        button.innerHTML = '<i class="fas fa-check-circle"></i> Complete';
+        button.disabled = false;
+
+        console.error('Golden glove prediction error:', error);
+        alert(`Error saving prediction: ${error.message}`);
     }
 }
 

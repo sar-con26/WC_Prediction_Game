@@ -1,7 +1,6 @@
-// api.js
+// api.js - CORRECTED
 // API Service for communicating with Flask backend
 
-// Determine API base URL dynamically
 const API_BASE_URL = (() => {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         return 'http://localhost:5000/api';
@@ -10,8 +9,6 @@ const API_BASE_URL = (() => {
     }
 })();
 
-console.log('🔗 API Base URL:', API_BASE_URL);
-
 /**
  * Register a new user
  * @param {Object} userData - User registration data
@@ -19,8 +16,6 @@ console.log('🔗 API Base URL:', API_BASE_URL);
  */
 async function registerUser(userData) {
     try {
-        console.log('📤 Registering user:', userData.email);
-        
         const response = await fetch(`${API_BASE_URL}/register`, {
             method: 'POST',
             headers: {
@@ -30,14 +25,11 @@ async function registerUser(userData) {
                 email: userData.email,
                 username: userData.username,
                 password: userData.password,
-                country_guess: userData.country_guess
+                office_location: userData.office_location
             })
         });
 
-        console.log('📥 Registration response status:', response.status);
-        
         const data = await response.json();
-        console.log('📥 Registration response data:', data);
 
         if (!response.ok) {
             throw new Error(data.message || 'Registration failed');
@@ -45,7 +37,7 @@ async function registerUser(userData) {
 
         return data;
     } catch (error) {
-        console.error('❌ Registration error:', error);
+        console.error('Registration error:', error);
         throw error;
     }
 }
@@ -58,8 +50,6 @@ async function registerUser(userData) {
  */
 async function loginUser(email, password) {
     try {
-        console.log('📤 Logging in user:', email);
-        
         const response = await fetch(`${API_BASE_URL}/login`, {
             method: 'POST',
             headers: {
@@ -71,10 +61,7 @@ async function loginUser(email, password) {
             })
         });
 
-        console.log('📥 Login response status:', response.status);
-        
         const data = await response.json();
-        console.log('📥 Login response data:', data);
 
         if (!response.ok) {
             throw new Error(data.message || 'Login failed');
@@ -82,7 +69,148 @@ async function loginUser(email, password) {
 
         return data;
     } catch (error) {
-        console.error('❌ Login error:', error);
+        console.error('Login error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Assign team to user
+ * @param {number} userId - User ID
+ * @param {string} jwtToken - JWT token
+ * @returns {Promise} Response with assigned team
+ */
+async function assignTeamToUser(userId, jwtToken) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/team-assignment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${jwtToken}`
+            },
+            body: JSON.stringify({
+                user_id: userId,
+                jwt_token: jwtToken
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Team assignment failed');
+        }
+
+        return data;
+    } catch (error) {
+        console.error('Team assignment error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Save tournament winner prediction
+ * @param {number} userId - User ID
+ * @param {string} jwtToken - JWT token
+ * @param {string} country - Country prediction
+ * @returns {Promise} Response
+ */
+async function saveTournamentWinnerPrediction(userId, jwtToken, country) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/team-assignment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${jwtToken}`
+            },
+            body: JSON.stringify({
+                action: 'predict_tournament_winner',
+                user_id: userId,
+                jwt_token: jwtToken,
+                country: country
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Prediction save failed');
+        }
+
+        return data;
+    } catch (error) {
+        console.error('Tournament winner prediction error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Save golden boot prediction
+ * @param {number} userId - User ID
+ * @param {string} jwtToken - JWT token
+ * @param {string} playerName - Player name
+ * @returns {Promise} Response
+ */
+async function saveGoldenBootPrediction(userId, jwtToken, playerName) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/team-assignment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${jwtToken}`
+            },
+            body: JSON.stringify({
+                action: 'predict_golden_boot',
+                user_id: userId,
+                jwt_token: jwtToken,
+                player_name: playerName
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Prediction save failed');
+        }
+
+        return data;
+    } catch (error) {
+        console.error('Golden boot prediction error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Save golden glove prediction
+ * @param {number} userId - User ID
+ * @param {string} jwtToken - JWT token
+ * @param {string} playerName - Player name
+ * @returns {Promise} Response
+ */
+async function saveGoldenGlovePrediction(userId, jwtToken, playerName) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/team-assignment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${jwtToken}`
+            },
+            body: JSON.stringify({
+                action: 'predict_golden_glove',
+                user_id: userId,
+                jwt_token: jwtToken,
+                player_name: playerName
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Prediction save failed');
+        }
+
+        return data;
+    } catch (error) {
+        console.error('Golden glove prediction error:', error);
         throw error;
     }
 }
@@ -93,7 +221,6 @@ async function loginUser(email, password) {
  */
 function storeJWTToken(token) {
     localStorage.setItem('jwt_token', token);
-    console.log('✅ JWT token stored');
 }
 
 /**
@@ -109,9 +236,7 @@ function getJWTToken() {
  * @returns {boolean} True if user has valid token
  */
 function isAuthenticated() {
-    const token = getJWTToken();
-    console.log('🔐 Authentication check:', !!token);
-    return !!token;
+    return !!getJWTToken();
 }
 
 /**
@@ -122,11 +247,10 @@ function logoutUser() {
     localStorage.removeItem('userId');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userName');
-    localStorage.removeItem('userCountry');
+    localStorage.removeItem('userOfficeLocation');
     localStorage.removeItem('assignedTeam');
     localStorage.removeItem('predictions');
     localStorage.removeItem('predictionState');
-    console.log('✅ User logged out');
 }
 
 /**
@@ -140,35 +264,3 @@ function getAuthHeaders() {
         'Authorization': `Bearer ${token}`
     };
 }
-
-/**
- * Health check - verify backend is running
- * @returns {Promise} Response from server
- */
-async function healthCheck() {
-    try {
-        console.log('🏥 Performing health check...');
-        
-        const response = await fetch(`${API_BASE_URL}/health`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
-
-        const data = await response.json();
-        console.log('✅ Health check passed:', data);
-        return data;
-    } catch (error) {
-        console.error('❌ Health check failed:', error);
-        throw error;
-    }
-}
-
-// Perform health check on page load
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 App initialized, checking backend health...');
-    healthCheck().catch(error => {
-        console.warn('⚠️ Backend health check failed:', error.message);
-    });
-});

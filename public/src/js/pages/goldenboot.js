@@ -1,4 +1,4 @@
-// Golden Boot Prediction Page
+// Golden Boot Prediction Page - CORRECTED
 
 function createGoldenBootPage() {
     return `
@@ -38,7 +38,7 @@ function createGoldenBootPage() {
                 </div>
 
                 <div class="prediction-actions">
-                    <button class="btn btn-primary" onclick="submitGoldenBootDirect()">
+                    <button class="btn btn-primary" onclick="submitGoldenBoot(this)">
                         <i class="fas fa-arrow-right"></i> Continue to Next Step
                     </button>
                 </div>
@@ -47,7 +47,7 @@ function createGoldenBootPage() {
     `;
 }
 
-function submitGoldenBootDirect() {
+async function submitGoldenBoot(button) {
     const playerName = document.getElementById('golden-boot').value.trim();
 
     if (!playerName) {
@@ -60,30 +60,80 @@ function submitGoldenBootDirect() {
         return;
     }
 
-    // Save to localStorage
-    const predictions = JSON.parse(localStorage.getItem('predictions') || '{}');
-    predictions.goldenBoot = playerName;
-    localStorage.setItem('predictions', JSON.stringify(predictions));
+    try {
+        // Show loading state
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        button.disabled = true;
 
-    // Update prediction state
-    const predictionState = JSON.parse(localStorage.getItem('predictionState') || '{}');
-    predictionState.predictions.goldenBoot = true;
-    predictionState.completedAt.goldenBoot = new Date().toISOString();
-    localStorage.setItem('predictionState', JSON.stringify(predictionState));
+        const userId = localStorage.getItem('userId');
+        const jwtToken = localStorage.getItem('jwt_token');
 
-    // Navigate to golden glove page
-    const goldenGlovePage = document.getElementById('goldenGlovePage');
-    if (goldenGlovePage) {
-        // Hide all pages
-        document.querySelectorAll('.page').forEach(page => {
-            page.classList.remove('active');
-            page.style.display = 'none';
+        console.log('Saving golden boot prediction:', {
+            userId: userId,
+            playerName: playerName,
+            jwtToken: jwtToken ? 'present' : 'missing'
         });
-        
-        // Show golden glove page
-        goldenGlovePage.innerHTML = createGoldenGlovePage();
-        goldenGlovePage.classList.add('active');
-        goldenGlovePage.style.display = 'block';
+
+        // Call Lambda to save prediction
+        const response = await fetch('/api/team-assignment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${jwtToken}`
+            },
+            body: JSON.stringify({
+                action: 'predict_golden_boot',
+                user_id: parseInt(userId),
+                jwt_token: jwtToken,
+                player_name: playerName
+            })
+        });
+
+        const data = await response.json();
+        console.log('Golden boot prediction response:', data);
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Prediction save failed');
+        }
+
+        // Save to localStorage
+        const predictions = JSON.parse(localStorage.getItem('predictions') || '{}');
+        predictions.goldenBoot = playerName;
+        localStorage.setItem('predictions', JSON.stringify(predictions));
+
+        // Update prediction state
+        const predictionState = JSON.parse(localStorage.getItem('predictionState') || '{}');
+        predictionState.predictions.goldenBoot = true;
+        predictionState.completedAt.goldenBoot = new Date().toISOString();
+        localStorage.setItem('predictionState', JSON.stringify(predictionState));
+
+        // Reset button
+        button.innerHTML = originalText;
+        button.disabled = false;
+
+        // Navigate to golden glove page
+        const goldenGlovePage = document.getElementById('goldenGlovePage');
+        if (goldenGlovePage) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+                page.style.display = 'none';
+            });
+            
+            // Show golden glove page
+            goldenGlovePage.innerHTML = createGoldenGlovePage();
+            goldenGlovePage.classList.add('active');
+            goldenGlovePage.style.display = 'block';
+        }
+
+    } catch (error) {
+        // Reset button
+        button.innerHTML = '<i class="fas fa-arrow-right"></i> Continue to Next Step';
+        button.disabled = false;
+
+        console.error('Golden boot prediction error:', error);
+        alert(`Error saving prediction: ${error.message}`);
     }
 }
 

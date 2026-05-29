@@ -1,4 +1,4 @@
-// Main App Logic
+// Main App Logic - UPDATED
 
 // Initialize app
 function initApp() {
@@ -103,8 +103,8 @@ function showPage(pageId) {
             targetPage.innerHTML = createGoldenGlovePage();
         }
         else if (pageId === 'adminPage' && !targetPage.innerHTML) {
-        console.log('Creating Admin Page');
-        targetPage.innerHTML = createAdminPage();
+            console.log('Creating Admin Page');
+            targetPage.innerHTML = createAdminPage();
         }
         
         // Show the page - use multiple methods to ensure it's visible

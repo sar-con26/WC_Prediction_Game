@@ -1,4 +1,4 @@
-// Sign-Up Page
+// Sign-Up Page - FIXED with JWT Token
 
 function createSignupPage() {
     return `
@@ -17,7 +17,7 @@ function createSignupPage() {
                 
                 <div class="form-group">
                     <label for="signup-username">Username</label>
-                    <input type="text" id="signup-username" class="form-input" placeholder="Choose a username (3-20 chars)">
+                    <input type="text" id="signup-username" class="form-input" placeholder="your_username">
                 </div>
                 
                 <div class="form-group">
@@ -31,23 +31,15 @@ function createSignupPage() {
                 </div>
                 
                 <div class="form-group">
-                    <label for="signup-country">Country Guess</label>
-                    <select id="signup-country" class="form-input" style="background-color: #3a3a3a; color: white;">
-                        <option value="">Select your country</option>
-                        <option value="France">🇫🇷 France</option>
-                        <option value="Brazil">🇧🇷 Brazil</option>
-                        <option value="Argentina">🇦🇷 Argentina</option>
-                        <option value="Spain">🇪🇸 Spain</option>
-                        <option value="Germany">🇩🇪 Germany</option>
-                        <option value="England">🇬🇧 England</option>
-                        <option value="Netherlands">🇳🇱 Netherlands</option>
-                        <option value="Belgium">🇧🇪 Belgium</option>
-                        <option value="Portugal">🇵🇹 Portugal</option>
-                        <option value="Italy">🇮🇹 Italy</option>
+                    <label for="signup-office">Office Location</label>
+                    <select id="signup-office" class="form-input" style="background-color: #3a3a3a; color: white;">
+                        <option value="">Select your office location</option>
+                        <option value="Cork">Cork</option>
+                        <option value="Dublin">Dublin</option>
                     </select>
                 </div>
                 
-                <button type="button" class="btn btn-primary" onclick="handleSignup()">
+                <button type="button" class="btn btn-primary" id="signupBtn" onclick="handleSignup(this)">
                     <i class="fas fa-user-plus"></i> Sign Up
                 </button>
                 
@@ -60,15 +52,15 @@ function createSignupPage() {
 }
 
 // Handle signup
-async function handleSignup() {
+async function handleSignup(button) {
     const email = document.getElementById('signup-email').value.trim();
     const username = document.getElementById('signup-username').value.trim();
     const password = document.getElementById('signup-password').value.trim();
     const confirmPassword = document.getElementById('confirm-password').value.trim();
-    const country_guess = document.getElementById('signup-country').value.trim();
+    const officeLocation = document.getElementById('signup-office').value.trim();
     
     // Validation
-    if (!email || !username || !password || !confirmPassword || !country_guess) {
+    if (!email || !username || !password || !confirmPassword || !officeLocation) {
         alert('Please fill in all fields');
         return;
     }
@@ -80,6 +72,11 @@ async function handleSignup() {
 
     if (username.length < 3 || username.length > 20) {
         alert('Username must be 3-20 characters');
+        return;
+    }
+
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(username)) {
+        alert('Username must start with letter or underscore, contain only alphanumeric and underscores');
         return;
     }
 
@@ -103,26 +100,46 @@ async function handleSignup() {
         return;
     }
 
+    if (officeLocation !== 'Cork' && officeLocation !== 'Dublin') {
+        alert('Please select a valid office location');
+        return;
+    }
+
     try {
         // Show loading state
-        const button = event.target;
         const originalText = button.innerHTML;
         button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating user...';
         button.disabled = true;
+
+        console.log('Calling registerUser with:', {
+            email: email,
+            username: username,
+            office_location: officeLocation
+        });
 
         // Call API
         const response = await registerUser({
             email: email,
             username: username,
             password: password,
-            country_guess: country_guess
+            office_location: officeLocation
         });
+
+        console.log('Registration response:', response);
 
         // Store user data
         localStorage.setItem('userId', response.user_id);
         localStorage.setItem('userName', response.username);
         localStorage.setItem('userEmail', response.email);
-        localStorage.setItem('userCountry', country_guess);
+        localStorage.setItem('userOfficeLocation', response.office_location);
+        
+        // IMPORTANT: Store the JWT token from registration response
+        if (response.jwt_token) {
+            localStorage.setItem('jwt_token', response.jwt_token);
+            console.log('JWT token stored from registration');
+        } else {
+            console.warn('No JWT token in registration response');
+        }
 
         // Reset button
         button.innerHTML = originalText;
@@ -136,7 +153,6 @@ async function handleSignup() {
 
     } catch (error) {
         // Reset button
-        const button = event.target;
         button.innerHTML = '<i class="fas fa-user-plus"></i> Sign Up';
         button.disabled = false;
 
