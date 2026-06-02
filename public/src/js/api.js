@@ -1,4 +1,4 @@
-// api.js - CORRECTED
+// api.js
 // API Service for communicating with Flask backend
 
 const API_BASE_URL = (() => {
@@ -75,147 +75,6 @@ async function loginUser(email, password) {
 }
 
 /**
- * Assign team to user
- * @param {number} userId - User ID
- * @param {string} jwtToken - JWT token
- * @returns {Promise} Response with assigned team
- */
-async function assignTeamToUser(userId, jwtToken) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/team-assignment`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${jwtToken}`
-            },
-            body: JSON.stringify({
-                user_id: userId,
-                jwt_token: jwtToken
-            })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.message || 'Team assignment failed');
-        }
-
-        return data;
-    } catch (error) {
-        console.error('Team assignment error:', error);
-        throw error;
-    }
-}
-
-/**
- * Save tournament winner prediction
- * @param {number} userId - User ID
- * @param {string} jwtToken - JWT token
- * @param {string} country - Country prediction
- * @returns {Promise} Response
- */
-async function saveTournamentWinnerPrediction(userId, jwtToken, country) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/team-assignment`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${jwtToken}`
-            },
-            body: JSON.stringify({
-                action: 'predict_tournament_winner',
-                user_id: userId,
-                jwt_token: jwtToken,
-                country: country
-            })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.message || 'Prediction save failed');
-        }
-
-        return data;
-    } catch (error) {
-        console.error('Tournament winner prediction error:', error);
-        throw error;
-    }
-}
-
-/**
- * Save golden boot prediction
- * @param {number} userId - User ID
- * @param {string} jwtToken - JWT token
- * @param {string} playerName - Player name
- * @returns {Promise} Response
- */
-async function saveGoldenBootPrediction(userId, jwtToken, playerName) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/team-assignment`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${jwtToken}`
-            },
-            body: JSON.stringify({
-                action: 'predict_golden_boot',
-                user_id: userId,
-                jwt_token: jwtToken,
-                player_name: playerName
-            })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.message || 'Prediction save failed');
-        }
-
-        return data;
-    } catch (error) {
-        console.error('Golden boot prediction error:', error);
-        throw error;
-    }
-}
-
-/**
- * Save golden glove prediction
- * @param {number} userId - User ID
- * @param {string} jwtToken - JWT token
- * @param {string} playerName - Player name
- * @returns {Promise} Response
- */
-async function saveGoldenGlovePrediction(userId, jwtToken, playerName) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/team-assignment`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${jwtToken}`
-            },
-            body: JSON.stringify({
-                action: 'predict_golden_glove',
-                user_id: userId,
-                jwt_token: jwtToken,
-                player_name: playerName
-            })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.message || 'Prediction save failed');
-        }
-
-        return data;
-    } catch (error) {
-        console.error('Golden glove prediction error:', error);
-        throw error;
-    }
-}
-
-/**
  * Store JWT token in localStorage
  * @param {string} token - JWT token
  */
@@ -263,4 +122,138 @@ function getAuthHeaders() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
     };
+}
+
+/**
+ * Get user leaderboard
+ * @param {number} limit - Number of users to return (default 10, max 100)
+ * @returns {Promise} Leaderboard data
+ */
+async function getUserLeaderboard(limit = 10) {
+    try {
+        console.log('Fetching user leaderboard with limit:', limit);
+        
+        const response = await fetch(`${API_BASE_URL}/leaderboard`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'get_user_leaderboard',
+                limit: limit
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch user leaderboard');
+        }
+
+        console.log('User leaderboard response:', data);
+        return data;
+    } catch (error) {
+        console.error('User leaderboard error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Get team leaderboard
+ * @returns {Promise} Team leaderboard data
+ */
+async function getTeamLeaderboard() {
+    try {
+        console.log('Fetching team leaderboard');
+        
+        const response = await fetch(`${API_BASE_URL}/leaderboard`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'get_team_leaderboard'
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch team leaderboard');
+        }
+
+        console.log('Team leaderboard response:', data);
+        return data;
+    } catch (error) {
+        console.error('Team leaderboard error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Get regional comparison (Dublin vs Cork)
+ * @returns {Promise} Regional comparison data
+ */
+async function getRegionalComparison() {
+    try {
+        console.log('Fetching regional comparison');
+        
+        const response = await fetch(`${API_BASE_URL}/leaderboard`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'get_regional_comparison'
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch regional comparison');
+        }
+
+        console.log('Regional comparison response:', data);
+        return data;
+    } catch (error) {
+        console.error('Regional comparison error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Get user statistics
+ * @param {number} userId - User ID
+ * @param {string} jwtToken - JWT token
+ * @returns {Promise} User statistics
+ */
+async function getUserStats(userId, jwtToken) {
+    try {
+        console.log('Fetching user stats for user:', userId);
+        
+        const response = await fetch(`${API_BASE_URL}/leaderboard`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'get_user_stats',
+                user_id: userId,
+                jwt_token: jwtToken
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch user stats');
+        }
+
+        console.log('User stats response:', data);
+        return data;
+    } catch (error) {
+        console.error('User stats error:', error);
+        throw error;
+    }
 }

@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 LAMBDA_REGISTRATION_URL = os.getenv('LAMBDA_REGISTRATION_URL')
 LAMBDA_LOGIN_URL = os.getenv('LAMBDA_LOGIN_URL')
 LAMBDA_TEAM_ASSIGNMENT_URL = os.getenv('LAMBDA_TEAM_ASSIGNMENT_URL')
+LAMBDA_LEADERBOARD_URL = os.getenv('LAMBDA_LEADERBOARD_URL')
 
 # Log startup
 logger.info("=" * 60)
@@ -42,6 +43,7 @@ logger.info(f"Index.html Exists: {os.path.exists(os.path.join(PUBLIC_DIR, 'index
 logger.info(f"Registration Lambda URL: {LAMBDA_REGISTRATION_URL}")
 logger.info(f"Login Lambda URL: {LAMBDA_LOGIN_URL}")
 logger.info(f"Team Assignment Lambda URL: {LAMBDA_TEAM_ASSIGNMENT_URL}")
+logger.info(f"Leaderboard Lambda URL: {LAMBDA_LEADERBOARD_URL}")
 logger.info("=" * 60)
 
 
@@ -106,7 +108,6 @@ def register():
         # Validate required fields
         if not data or not all(k in data for k in ['email', 'username', 'password', 'office_location']):
             logger.error("[REGISTER] Missing required fields")
-            logger.error(f"[REGISTER] Received fields: {list(data.keys()) if data else 'None'}")
             return jsonify({
                 'status': 'error',
                 'message': 'Missing required fields'
@@ -123,7 +124,6 @@ def register():
         }
         
         logger.info(f"[REGISTER] Forwarding to Lambda: {LAMBDA_REGISTRATION_URL}")
-        logger.info(f"[REGISTER] Lambda event: {lambda_event}")
         
         try:
             response = requests.post(
@@ -267,7 +267,7 @@ def login():
 
 @app.route('/api/team-assignment', methods=['POST'])
 def team_assignment():
-    """Forward team assignment request to Lambda"""
+    """Forward team assignment and prediction requests to Lambda"""
     try:
         logger.info("[TEAM_ASSIGNMENT] Team assignment request received")
         
@@ -276,22 +276,16 @@ def team_assignment():
         logger.info(f"[TEAM_ASSIGNMENT] Request data: {data}")
         
         # Validate required fields
-        if not data or not all(k in data for k in ['user_id', 'jwt_token']):
-            logger.error("[TEAM_ASSIGNMENT] Missing required fields")
+        if not data or 'action' not in data:
+            logger.error("[TEAM_ASSIGNMENT] Missing action field")
             return jsonify({
                 'status': 'error',
-                'message': 'Missing required fields'
+                'message': 'Missing action field'
             }), 400
         
         # Create Lambda event format
         lambda_event = {
-            'body': json.dumps({
-                'action': data.get('action', 'assign_team'),
-                'user_id': data.get('user_id'),
-                'jwt_token': data.get('jwt_token'),
-                'country': data.get('country'),
-                'player_name': data.get('player_name')
-            })
+            'body': json.dumps(data)
         }
         
         logger.info(f"[TEAM_ASSIGNMENT] Forwarding to Lambda: {LAMBDA_TEAM_ASSIGNMENT_URL}")
@@ -346,6 +340,87 @@ def team_assignment():
     
     except Exception as e:
         logger.error(f"[TEAM_ASSIGNMENT] Unexpected error: {str(e)}", exc_info=True)
+        return jsonify({
+            'status': 'error',
+            'message': 'Internal server error'
+        }), 500
+
+
+@app.route('/api/leaderboard', methods=['POST'])
+def leaderboard():
+    """Forward leaderboard requests to Lambda"""
+    try:
+        logger.info("[LEADERBOARD] Leaderboard request received")
+        
+        # Get request data
+        data = request.get_json()
+        logger.info(f"[LEADERBOARD] Request data: {data}")
+        
+        # Validate required fields
+        if not data or 'action' not in data:
+            logger.error("[LEADERBOARD] Missing action field")
+            return jsonify({
+                'status': 'error',
+                'message': 'Missing action field'
+            }), 400
+        
+        # Create Lambda event format
+        lambda_event = {
+            'body': json.dumps(data)
+        }
+        
+        logger.info(f"[LEADERBOARD] Forwarding to Lambda: {LAMBDA_LEADERBOARD_URL}")
+        
+        try:
+            response = requests.post(
+                LAMBDA_LEADERBOARD_URL,
+                json=lambda_event,
+                timeout=30
+            )
+            
+            logger.info(f"[LEADERBOARD] Lambda response status: {response.status_code}")
+            logger.info(f"[LEADERBOARD] Lambda response: {response.text}")
+            
+            # Parse Lambda response
+            lambda_response = response.json()
+            
+            # Lambda returns wrapped response, extract the actual response
+            if 'body' in lambda_response:
+                try:
+                    actual_response = json.loads(lambda_response['body'])
+                    status_code = lambda_response.get('statusCode', 200)
+                    return actual_response, status_code
+                except json.JSONDecodeError:
+                    return lambda_response, response.status_code
+            else:
+                return lambda_response, response.status_code
+            
+        except requests.exceptions.Timeout:
+            logger.error("[LEADERBOARD] Lambda request timed out (30 seconds)")
+            return jsonify({
+                'status': 'error',
+                'message': 'Lambda request timed out',
+                'error_code': 'TIMEOUT'
+            }), 504
+            
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"[LEADERBOARD] Cannot connect to Lambda: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': 'Cannot connect to Lambda',
+                'error_code': 'CONNECTION_ERROR'
+            }), 503
+            
+        except Exception as e:
+            logger.error(f"[LEADERBOARD] Lambda request failed: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': 'Lambda request failed',
+                'error_code': 'LAMBDA_ERROR'
+            }), 500
+    
+    except Exception as e:
+        logger.error(f"[LEADERBOARD] Unexpected error: {str(e)}", exc_info=True)
         return jsonify({
             'status': 'error',
             'message': 'Internal server error'

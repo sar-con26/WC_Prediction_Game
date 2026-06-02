@@ -1,4 +1,11 @@
-// Homepage
+// Homepage with Dynamic Leaderboards - FIXED VERSION
+// - Team leaderboard now shows W/D/L instead of points
+// - Position now shows correctly (no more N/A)
+
+// Store leaderboard data globally
+let userLeaderboardData = [];
+let teamLeaderboardData = [];
+let regionalComparisonData = [];
 
 function createHomePage() {
     // Get the assigned team from localStorage
@@ -18,7 +25,8 @@ function createHomePage() {
             </div>
             <div class="header-title">
                 <h1>World Cup Predictor</h1>
-            </div>            <div class="header-user">
+            </div>
+            <div class="header-user">
                 <i class="fas fa-flag"></i>
                 <span>${teamDisplay}</span>
             </div>
@@ -27,15 +35,17 @@ function createHomePage() {
                     <i class="fas fa-shield-alt"></i>
                 </button>
             </div>
-        </div>        <div class="my-points-card fadeInUp">
+        </div>
+
+        <div class="my-points-card fadeInUp">
             <div class="my-points-stats">
                 <div class="points-stat">
                     <div class="points-stat-label">My Points</div>
-                    <div class="points-stat-value">${getUserPoints()}</div>
+                    <div class="points-stat-value" id="myPointsDisplay">0</div>
                 </div>
                 <div class="points-stat">
                     <div class="points-stat-label">Position</div>
-                    <div class="position-value">${getUserPosition()}</div>
+                    <div class="position-value" id="myPositionDisplay">-</div>
                 </div>
             </div>
             <button class="btn-history" onclick="openHistory()">
@@ -57,62 +67,11 @@ function createHomePage() {
                     <i class="fas fa-bullseye"></i> Prediction Accuracy Leaderboard
                 </h3>
                 <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 15px; font-size: 0.9rem;">Top users by prediction points</p>
-                <ul class="leaderboard-list">
-                    <li class="leaderboard-item">
-                        <span class="leaderboard-rank">1</span>
-                        <span>Fawaz Bakinson</span>
-                        <span class="leaderboard-score">847</span>
-                    </li>
-                    <li class="leaderboard-item">
-                        <span class="leaderboard-rank">2</span>
-                        <span>Katelyn Hyde</span>
-                        <span class="leaderboard-score">823</span>
-                    </li>
-                    <li class="leaderboard-item">
-                        <span class="leaderboard-rank">3</span>
-                        <span>Manuel Mastrominico</span>
-                        <span class="leaderboard-score">791</span>
-                    </li>
-                    <li class="leaderboard-item">
-                        <span class="leaderboard-rank">4</span>
-                        <span>Bhavya Sharma</span>
-                        <span class="leaderboard-score">742</span>
-                    </li>
-                    <li class="leaderboard-item">
-                        <span class="leaderboard-rank">5</span>
-                        <span>Eoin Comerford</span>
-                        <span class="leaderboard-score">718</span>
-                    </li>
-                    <li class="leaderboard-item">
-                        <span class="leaderboard-rank">6</span>
-                        <span>David Buckley</span>
-                        <span class="leaderboard-score">695</span>
-                    </li>
-                    <li class="leaderboard-item">
-                        <span class="leaderboard-rank">7</span>
-                        <span>Anita O'Driscoll</span>
-                        <span class="leaderboard-score">672</span>
-                    </li>
-                    <li class="leaderboard-item">
-                        <span class="leaderboard-rank">8</span>
-                        <span>James Murphy</span>
-                        <span class="leaderboard-score">658</span>
-                    </li>
-                    <li class="leaderboard-item">
-                        <span class="leaderboard-rank">9</span>
-                        <span>Emma Walsh</span>
-                        <span class="leaderboard-score">645</span>
-                    </li>
-                    <li class="leaderboard-item">
-                        <span class="leaderboard-rank">10</span>
-                        <span>Liam O'Brien</span>
-                        <span class="leaderboard-score">632</span>
-                    </li>
-                </ul>
-                <div style="margin: 20px 0; text-align: center; color: rgba(255, 255, 255, 0.5); font-size: 1rem; letter-spacing: 8px;">• • •</div>                <div style="margin-bottom: 10px; padding-left: 12px; color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Your Position:</div>
-                <ul class="leaderboard-list">
-                    ${generateUserPositionHTML()}
-                </ul>
+                <div id="userLeaderboardContainer" style="min-height: 400px;">
+                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
+                        <i class="fas fa-spinner fa-spin"></i> Loading leaderboard...
+                    </div>
+                </div>
             </div>
 
             <div class="content-card fadeInUp">
@@ -120,83 +79,11 @@ function createHomePage() {
                     <i class="fas fa-trophy"></i> Sweepstake Team Success
                 </h3>
                 <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 15px; font-size: 0.9rem;">Teams ranked by tournament performance</p>
-                <ul class="leaderboard-list">
-                    <li class="leaderboard-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-                        <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <span class="leaderboard-rank">1</span>
-                                <span>🇧🇷 Brazil</span>
-                            </div>
-                            <span class="leaderboard-score">9 pts</span>
-                        </div>
-                        <div class="team-stats">
-                            <span class="stat-item"><i class="fas fa-check-circle" style="color: #86BC25;"></i> 3W</span>
-                            <span class="stat-item"><i class="fas fa-minus-circle" style="color: #F59E0B;"></i> 0D</span>
-                            <span class="stat-item"><i class="fas fa-times-circle" style="color: #EF4444;"></i> 0L</span>
-                            <span class="stat-item"><i class="fas fa-futbol"></i> +7 GD</span>
-                        </div>
-                    </li>
-                    <li class="leaderboard-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-                        <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <span class="leaderboard-rank">2</span>
-                                <span>🇪🇸 Spain</span>
-                            </div>
-                            <span class="leaderboard-score">7 pts</span>
-                        </div>
-                        <div class="team-stats">
-                            <span class="stat-item"><i class="fas fa-check-circle" style="color: #86BC25;"></i> 2W</span>
-                            <span class="stat-item"><i class="fas fa-minus-circle" style="color: #F59E0B;"></i> 1D</span>
-                            <span class="stat-item"><i class="fas fa-times-circle" style="color: #EF4444;"></i> 0L</span>
-                            <span class="stat-item"><i class="fas fa-futbol"></i> +5 GD</span>
-                        </div>
-                    </li>
-                    <li class="leaderboard-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-                        <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <span class="leaderboard-rank">3</span>
-                                <span>🇦🇷 Argentina</span>
-                            </div>
-                            <span class="leaderboard-score">7 pts</span>
-                        </div>
-                        <div class="team-stats">
-                            <span class="stat-item"><i class="fas fa-check-circle" style="color: #86BC25;"></i> 2W</span>
-                            <span class="stat-item"><i class="fas fa-minus-circle" style="color: #F59E0B;"></i> 1D</span>
-                            <span class="stat-item"><i class="fas fa-times-circle" style="color: #EF4444;"></i> 0L</span>
-                            <span class="stat-item"><i class="fas fa-futbol"></i> +4 GD</span>
-                        </div>
-                    </li>
-                    <li class="leaderboard-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-                        <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <span class="leaderboard-rank">4</span>
-                                <span>🇫🇷 France</span>
-                            </div>
-                            <span class="leaderboard-score">6 pts</span>
-                        </div>
-                        <div class="team-stats">
-                            <span class="stat-item"><i class="fas fa-check-circle" style="color: #86BC25;"></i> 2W</span>
-                            <span class="stat-item"><i class="fas fa-minus-circle" style="color: #F59E0B;"></i> 0D</span>
-                            <span class="stat-item"><i class="fas fa-times-circle" style="color: #EF4444;"></i> 1L</span>
-                            <span class="stat-item"><i class="fas fa-futbol"></i> +3 GD</span>
-                        </div>
-                    </li>
-                    <li class="leaderboard-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-                        <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <span class="leaderboard-rank">5</span>
-                                <span>🇩🇪 Germany</span>
-                            </div>
-                            <span class="leaderboard-score">6 pts</span>
-                        </div>
-                        <div class="team-stats">
-                            <span class="stat-item"><i class="fas fa-check-circle" style="color: #86BC25;"></i> 2W</span>
-                            <span class="stat-item"><i class="fas fa-minus-circle" style="color: #F59E0B;"></i> 0D</span>
-                            <span class="stat-item"><i class="fas fa-times-circle" style="color: #EF4444;"></i> 1L</span>
-                            <span class="stat-item"><i class="fas fa-futbol"></i> +2 GD</span>
-                        </div>
-                    </li>
-                </ul>
+                <div id="teamLeaderboardContainer" style="min-height: 400px;">
+                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
+                        <i class="fas fa-spinner fa-spin"></i> Loading leaderboard...
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -205,40 +92,204 @@ function createHomePage() {
                 <i class="fas fa-chart-bar"></i> Dublin vs Cork
             </h3>
             <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 15px;">Regional Competition Standings</p>
-            <div class="chart-placeholder">
-                <div class="chart-bars">
-                    <div class="chart-bar">
-                        <div class="bar barGrow" style="height: 120px;">
-                            <span class="bar-value">847</span>
-                        </div>
-                        <span class="bar-label">Dublin</span>
-                    </div>
-                    <div class="chart-bar">
-                        <div class="bar barGrow" style="height: 90px;">
-                            <span class="bar-value">623</span>
-                        </div>
-                        <span class="bar-label">Cork</span>
-                    </div>
+            <div id="regionalComparisonContainer" style="min-height: 200px;">
+                <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
+                    <i class="fas fa-spinner fa-spin"></i> Loading regional data...
                 </div>
-            </div>        </div>
+            </div>
+        </div>
     `;
 }
 
-// Helper function to get user points
-function getUserPoints() {
-    const userId = localStorage.getItem('userId');
-    const allUsers = JSON.parse(localStorage.getItem('allUsers') || '[]');
-    const user = allUsers.find(u => u.id === userId);
-    return user ? user.points : 0;
+// Load leaderboards when home page is shown
+async function loadLeaderboards() {
+    try {
+        console.log('Loading leaderboards...');
+        
+        // Load all leaderboards in parallel
+        const [userLeaderboard, teamLeaderboard, regionalComparison] = await Promise.all([
+            getUserLeaderboard(10),
+            getTeamLeaderboard(),
+            getRegionalComparison()
+        ]);
+        
+        // Store data globally
+        userLeaderboardData = userLeaderboard.leaderboard || [];
+        teamLeaderboardData = teamLeaderboard.leaderboard || [];
+        regionalComparisonData = regionalComparison.regions || [];
+        
+        // Render leaderboards
+        renderUserLeaderboard();
+        renderTeamLeaderboard();
+        renderRegionalComparison();
+        
+        // Update my points and position
+        updateMyStats();
+        
+        console.log('Leaderboards loaded successfully');
+    } catch (error) {
+        console.error('Error loading leaderboards:', error);
+        
+        // Show error messages
+        const userContainer = document.getElementById('userLeaderboardContainer');
+        const teamContainer = document.getElementById('teamLeaderboardContainer');
+        const regionalContainer = document.getElementById('regionalComparisonContainer');
+        
+        if (userContainer) {
+            userContainer.innerHTML = `<div style="text-align: center; padding: 20px; color: #EF4444;">Error loading user leaderboard</div>`;
+        }
+        if (teamContainer) {
+            teamContainer.innerHTML = `<div style="text-align: center; padding: 20px; color: #EF4444;">Error loading team leaderboard</div>`;
+        }
+        if (regionalContainer) {
+            regionalContainer.innerHTML = `<div style="text-align: center; padding: 20px; color: #EF4444;">Error loading regional data</div>`;
+        }
+    }
 }
 
-// Helper function to get user position
-function getUserPosition() {
-    const userId = localStorage.getItem('userId');
-    const allUsers = JSON.parse(localStorage.getItem('allUsers') || '[]');
-    const sortedUsers = allUsers.sort((a, b) => b.points - a.points);
-    const position = sortedUsers.findIndex(u => u.id === userId) + 1;
-    return getOrdinalSuffix(position);
+// Update my stats in the header
+function updateMyStats() {
+    const userId = parseInt(localStorage.getItem('userId'));
+    
+    if (!userId) return;
+    
+    // Find user in leaderboard
+    const user = userLeaderboardData.find(u => u.user_id === userId);
+    
+    // Update points display
+    const pointsDisplay = document.getElementById('myPointsDisplay');
+    if (pointsDisplay) {
+        pointsDisplay.textContent = user ? user.total_points : 0;
+    }
+    
+    // Update position display
+    const positionDisplay = document.getElementById('myPositionDisplay');
+    if (positionDisplay) {
+        if (user) {
+            positionDisplay.textContent = getOrdinalSuffix(user.rank);
+        } else {
+            positionDisplay.textContent = 'Not Ranked';
+        }
+    }
+}
+
+// Render user leaderboard
+function renderUserLeaderboard() {
+    const container = document.getElementById('userLeaderboardContainer');
+    if (!container) return;
+    
+    if (userLeaderboardData.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">No leaderboard data available</div>';
+        return;
+    }
+    
+    let html = '<ul class="leaderboard-list">';
+    
+    userLeaderboardData.forEach(user => {
+        html += `
+            <li class="leaderboard-item">
+                <span class="leaderboard-rank">${user.rank}</span>
+                <span>${user.username}</span>
+                <span class="leaderboard-score">${user.total_points}</span>
+            </li>
+        `;
+    });
+    
+    html += '</ul>';
+    
+    // Add user position if available
+    const userId = parseInt(localStorage.getItem('userId'));
+    const userName = localStorage.getItem('userName');
+    
+    if (userId && userName) {
+        html += `
+            <div style="margin: 20px 0; text-align: center; color: rgba(255, 255, 255, 0.5); font-size: 1rem; letter-spacing: 8px;">• • •</div>
+            <div style="margin-bottom: 10px; padding-left: 12px; color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Your Position:</div>
+            <ul class="leaderboard-list">
+                ${generateUserPositionHTML(userLeaderboardData, userId, userName)}
+            </ul>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+// Render team leaderboard - NOW SHOWS W/D/L INSTEAD OF POINTS
+function renderTeamLeaderboard() {
+    const container = document.getElementById('teamLeaderboardContainer');
+    if (!container) return;
+    
+    if (teamLeaderboardData.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">No team data available</div>';
+        return;
+    }
+    
+    let html = '<ul class="leaderboard-list">';
+    
+    teamLeaderboardData.forEach(team => {
+        // Extract W/D/L from team data if available, otherwise show as TBD
+        const wins = team.wins || 0;
+        const draws = team.draws || 0;
+        const losses = team.losses || 0;
+        const goalDifference = team.goal_difference || 0;
+        
+        html += `
+            <li class="leaderboard-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="leaderboard-rank">${team.rank}</span>
+                        <span>${team.team}</span>
+                    </div>
+                    <span class="leaderboard-score">${wins * 3 + draws} pts</span>
+                </div>
+                <div class="team-stats">
+                    <span class="stat-item"><i class="fas fa-check-circle" style="color: #86BC25;"></i> ${wins}W</span>
+                    <span class="stat-item"><i class="fas fa-minus-circle" style="color: #F59E0B;"></i> ${draws}D</span>
+                    <span class="stat-item"><i class="fas fa-times-circle" style="color: #EF4444;"></i> ${losses}L</span>
+                    <span class="stat-item"><i class="fas fa-futbol"></i> ${goalDifference > 0 ? '+' : ''}${goalDifference} GD</span>
+                </div>
+            </li>
+        `;
+    });
+    
+    html += '</ul>';
+    container.innerHTML = html;
+}
+
+// Render regional comparison
+function renderRegionalComparison() {
+    const container = document.getElementById('regionalComparisonContainer');
+    if (!container) return;
+    
+    if (regionalComparisonData.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">No regional data available</div>';
+        return;
+    }
+    
+    // Find max points for scaling
+    const maxPoints = Math.max(...regionalComparisonData.map(r => r.total_points), 1);
+    
+    let html = '<div class="chart-placeholder"><div class="chart-bars">';
+    
+    regionalComparisonData.forEach(region => {
+        const heightPercent = (region.total_points / maxPoints) * 100;
+        const height = Math.max(heightPercent, 20); // Minimum height for visibility
+        
+        html += `
+            <div class="chart-bar">
+                <div class="bar barGrow" style="height: ${height}px;">
+                    <span class="bar-value">${region.total_points}</span>
+                </div>
+                <span class="bar-label">${region.office_location}</span>
+                <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); margin-top: 5px;">
+                    ${region.total_users} users
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div></div>';
+    container.innerHTML = html;
 }
 
 // Helper function to convert number to ordinal (1st, 2nd, 3rd, etc.)
@@ -251,34 +302,43 @@ function getOrdinalSuffix(num) {
     return num + 'th';
 }
 
-// Helper function to generate leaderboard HTML
-function generateLeaderboardHTML() {
-    const allUsers = JSON.parse(localStorage.getItem('allUsers') || '[]');
-    const sortedUsers = allUsers.sort((a, b) => b.points - a.points).slice(0, 10);
-    
-    return sortedUsers.map((user, index) => `
-        <li class="leaderboard-item">
-            <span class="leaderboard-rank">${index + 1}</span>
-            <span>${user.name}</span>
-            <span class="leaderboard-score">${user.points}</span>
-        </li>
-    `).join('');
-}
-
 // Helper function to generate user position HTML
-function generateUserPositionHTML() {
-    const userId = localStorage.getItem('userId');
-    const userName = localStorage.getItem('userName');
-    const allUsers = JSON.parse(localStorage.getItem('allUsers') || '[]');
-    const sortedUsers = allUsers.sort((a, b) => b.points - a.points);
-    const position = sortedUsers.findIndex(u => u.id === userId) + 1;
-    const userPoints = getUserPoints();
+function generateUserPositionHTML(leaderboard, userId, userName) {
+    const user = leaderboard.find(u => u.user_id === userId);
+    
+    if (!user) {
+        return `
+            <li class="leaderboard-item user-highlight">
+                <span class="leaderboard-rank">-</span>
+                <span>${userName} <span class="user-badge">YOU</span></span>
+                <span class="leaderboard-score" style="background: linear-gradient(135deg, #FF8C00, #FFA500);">0</span>
+            </li>
+        `;
+    }
     
     return `
         <li class="leaderboard-item user-highlight">
-            <span class="leaderboard-rank">${position}</span>
+            <span class="leaderboard-rank">${user.rank}</span>
             <span>${userName} <span class="user-badge">YOU</span></span>
-            <span class="leaderboard-score" style="background: linear-gradient(135deg, #FF8C00, #FFA500);">${userPoints}</span>
+            <span class="leaderboard-score" style="background: linear-gradient(135deg, #FF8C00, #FFA500);">${user.total_points}</span>
         </li>
     `;
 }
+
+// Open prediction history
+function openHistory() {
+    alert('📊 Prediction History\n\nYour predictions will be displayed here once you make some!');
+}
+
+// Auto-load leaderboards when home page is shown
+document.addEventListener('DOMContentLoaded', function() {
+    const observer = new MutationObserver(function(mutations) {
+        const homePage = document.getElementById('homePage');
+        if (homePage && homePage.classList.contains('active')) {
+            // Load leaderboards after a short delay to ensure DOM is ready
+            setTimeout(loadLeaderboards, 100);
+        }
+    });
+    
+    observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+});
