@@ -1,5 +1,6 @@
-// api.js
+// api.js - UPDATED VERSION WITH USER PREDICTIONS FETCH
 // API Service for communicating with Flask backend
+// Includes functions for match fetching, prediction submission, and user prediction retrieval
 
 const API_BASE_URL = (() => {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -122,6 +123,123 @@ function getAuthHeaders() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
     };
+}
+
+/**
+ * Fetch all matches from the database
+ * @param {string} status - Optional filter by status (scheduled, in_progress, finished)
+ * @returns {Promise} Matches data
+ */
+async function fetchMatches(status = null) {
+    try {
+        console.log('Fetching matches from database...');
+        
+        let url = `${API_BASE_URL}/matches`;
+        if (status) {
+            url += `?status=${encodeURIComponent(status)}`;
+        }
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch matches');
+        }
+
+        console.log('Matches fetched successfully:', data);
+        return data;
+    } catch (error) {
+        console.error('Fetch matches error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Fetch user's existing predictions for all matches
+ * FIXED: New function to load user predictions on page load
+ * @param {number} userId - User ID
+ * @returns {Promise} User predictions data
+ */
+async function fetchUserPredictions(userId) {
+    try {
+        console.log('[API] Fetching predictions for user:', userId);
+        
+        const response = await fetch(`${API_BASE_URL}/user-predictions/${userId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch user predictions');
+        }
+
+        console.log('[API] User predictions fetched successfully:', data);
+        return data;
+    } catch (error) {
+        console.error('[API] Fetch user predictions error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Submit a score prediction for a match
+ * @param {number} userId - User ID
+ * @param {string} matchId - Match ID
+ * @param {number} predictedHomeScore - Predicted home team score
+ * @param {number} predictedAwayScore - Predicted away team score
+ * @returns {Promise} Response from server
+ */
+async function submitPrediction(userId, matchId, predictedHomeScore, predictedAwayScore) {
+    try {
+        console.log('Submitting prediction:', {
+            userId,
+            matchId,
+            predictedHomeScore,
+            predictedAwayScore
+        });
+
+        const jwtToken = getJWTToken();
+        
+        if (!jwtToken) {
+            throw new Error('User not authenticated');
+        }
+
+        const response = await fetch(`${API_BASE_URL}/predict`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                user_id: userId,
+                jwt_token: jwtToken,
+                match_id: matchId,
+                predicted_home_score: parseInt(predictedHomeScore),
+                predicted_away_score: parseInt(predictedAwayScore)
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to submit prediction');
+        }
+
+        console.log('Prediction submitted successfully:', data);
+        return data;
+    } catch (error) {
+        console.error('Submit prediction error:', error);
+        throw error;
+    }
 }
 
 /**

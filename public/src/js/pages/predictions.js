@@ -1,168 +1,22 @@
-// Score Predictions Page
+// Score Predictions Page - FIXED VERSION
+// Features:
+// - Fetch matches from database
+// - Real-time countdown timers (2-hour deadline) with proper D/H/M/S format
+// - Load and display user's existing predictions
+// - Individual match submission
+// - Lock mechanism (2 hours before match)
+// - Show actual scores when finished
+// - Edit/resubmit before deadline
 
-// Match data - easily add/remove matches here
-const MATCHES = [
-    {
-        id: 1,
-        team1: { 
-            name: 'Brazil', 
-            flag: '🇧🇷' 
-        },
-        team2: { 
-            name: 'Morocco', 
-            flag: '🇲🇦' 
-        },
-        stage: 'Quarter Final',
-        date: 'June 15, 2026',
-        time: '20:00'
-    },
-    {
-        id: 2,
-        team1: { 
-            name: 'Spain', 
-            flag: '🇪🇸' 
-        },
-        team2: { 
-            name: 'Germany', 
-            flag: '🇩🇪' 
-        },
-        stage: 'Quarter Final',
-        date: 'June 16, 2026',
-        time: '18:00'
-    },
-    {
-        id: 3,
-        team1: { 
-            name: 'Argentina', 
-            flag: '🇦🇷' 
-        },
-        team2: { 
-            name: 'France', 
-            flag: '🇫🇷' 
-        },
-        stage: 'Semi Final',
-        date: 'June 20, 2026',
-        time: '20:00'
-    },
-    {
-        id: 4,
-        team1: { 
-            name: 'England', 
-            flag: '🇬🇧' 
-        },
-        team2: { 
-            name: 'Netherlands', 
-            flag: '🇳🇱' 
-        },
-        stage: 'Semi Final',
-        date: 'June 21, 2026',
-        time: '19:00'
-    },
-    {
-        id: 5,
-        team1: { 
-            name: 'Belgium', 
-            flag: '🇧🇪' 
-        },
-        team2: { 
-            name: 'Portugal', 
-            flag: '🇵🇹' 
-        },
-        stage: 'Quarter Final',
-        date: 'June 22, 2026',
-        time: '21:00'
-    }
-];
+// Global state
+let matchesData = [];
+let userPredictions = {};
+let timerIntervals = {};
 
+/**
+ * Create the predictions page HTML
+ */
 function createPredictionsPage() {
-    // Get current user data
-    const userEmail = localStorage.getItem('userEmail') || 'User';
-    const userName = localStorage.getItem('userName') || 'User';
-    const userTeam = localStorage.getItem('userTeam') || 'Not Selected';
-    const userPoints = localStorage.getItem('userPoints') || '0';
-    const userPosition = localStorage.getItem('userPosition') || 'N/A';
-
-    // Generate match cards dynamically
-    let matchCardsHTML = '';
-    MATCHES.forEach(match => {
-        const matchKey = `match_${match.id}`;
-        const savedPrediction = JSON.parse(
-            localStorage.getItem(matchKey) || '{}'
-        );
-        const team1Score = savedPrediction.team1Score || '0';
-        const team2Score = savedPrediction.team2Score || '0';
-
-        matchCardsHTML += `
-            <div class="match-card fadeInUp">
-                <div class="match-header">
-                    <div class="match-title">
-                        ${match.team1.name} vs ${match.team2.name}
-                    </div>
-                    <div class="match-date">
-                        ${match.stage} • ${match.date} • ${match.time}
-                    </div>
-                </div>
-                <div class="match-prediction">
-                    <div class="team-section">
-                        <div class="team-flag">${match.team1.flag}</div>
-                        <div class="team-name">${match.team1.name}</div>
-                        <input 
-                            type="number" 
-                            class="score-input" 
-                            id="match_${match.id}_team1" 
-                            value="${team1Score}" 
-                            min="0" 
-                            max="20"
-                        >
-                        <div class="score-controls">
-                            <button 
-                                class="score-btn" 
-                                onclick="decrementScore('match_${match.id}_team1')"
-                            >
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button 
-                                class="score-btn" 
-                                onclick="incrementScore('match_${match.id}_team1')"
-                            >
-                                <i class="fas fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="vs-divider">VS</div>
-                    
-                    <div class="team-section">
-                        <div class="team-flag">${match.team2.flag}</div>
-                        <div class="team-name">${match.team2.name}</div>
-                        <input 
-                            type="number" 
-                            class="score-input" 
-                            id="match_${match.id}_team2" 
-                            value="${team2Score}" 
-                            min="0" 
-                            max="20"
-                        >
-                        <div class="score-controls">
-                            <button 
-                                class="score-btn" 
-                                onclick="decrementScore('match_${match.id}_team2')"
-                            >
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button 
-                                class="score-btn" 
-                                onclick="incrementScore('match_${match.id}_team2')"
-                            >
-                                <i class="fas fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-
     return `
         <button class="back-button" onclick="showPage('homePage')">
             <i class="fas fa-arrow-left"></i> Back to Home
@@ -170,17 +24,14 @@ function createPredictionsPage() {
 
         <div class="header">
             <div class="header-logo">
-                <img 
-                    src="https://www.deloitte.com/content/dam/assets-shared/logos/svg/a-d/deloitte.svg" 
-                    alt="Deloitte"
-                >
+                <img src="https://www.deloitte.com/content/dam/assets-shared/logos/svg/a-d/deloitte.svg" alt="Deloitte">
             </div>
             <div class="header-title">
                 <h1>Score Predictions</h1>
             </div>
             <div class="header-user">
                 <i class="fas fa-flag"></i>
-                <span>Your Team: ${userTeam}</span>
+                <span id="userTeamDisplay">Your Team</span>
             </div>
         </div>
 
@@ -188,11 +39,11 @@ function createPredictionsPage() {
             <div class="my-points-stats">
                 <div class="points-stat">
                     <div class="points-stat-label">My Points</div>
-                    <div class="points-stat-value">${userPoints}</div>
+                    <div class="points-stat-value" id="myPointsDisplay">0</div>
                 </div>
                 <div class="points-stat">
                     <div class="points-stat-label">Position</div>
-                    <div class="position-value">${userPosition}</div>
+                    <div class="position-value" id="myPositionDisplay">-</div>
                 </div>
             </div>
             <button class="btn-history" onclick="openHistory()">
@@ -202,138 +53,525 @@ function createPredictionsPage() {
 
         <div class="matches-container">
             <div class="page-title fadeInUp">
-                <h1>Upcoming Matches (${MATCHES.length})</h1>
+                <h1>Upcoming Matches</h1>
                 <p>Make your score predictions for the following matches</p>
             </div>
 
-            ${matchCardsHTML}
+            <div id="matchesLoadingContainer" style="text-align: center; padding: 40px;">
+                <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: #86BC25;"></i>
+                <p style="margin-top: 15px; color: rgba(255, 255, 255, 0.7);">Loading matches...</p>
+            </div>
 
-            <div class="submit-section fadeInUp">
-                <button 
-                    class="btn btn-primary" 
-                    onclick="submitPredictions()" 
-                    style="max-width: 400px; margin: 0 auto;"
-                >
-                    <i class="fas fa-check-circle"></i> Submit All Predictions
-                </button>
+            <div id="matchesContainer" style="display: none;"></div>
+
+            <div id="noMatchesContainer" style="display: none; text-align: center; padding: 40px;">
+                <i class="fas fa-inbox" style="font-size: 3rem; color: rgba(255, 255, 255, 0.3); margin-bottom: 20px;"></i>
+                <p style="color: rgba(255, 255, 255, 0.6);">No matches available at the moment</p>
             </div>
         </div>
     `;
 }
 
-// Increment score
-function incrementScore(inputId) {
-    const input = document.getElementById(inputId);
-    if (input) {
-        let value = parseInt(input.value) || 0;
-        if (value < 20) {
-            input.value = value + 1;
+/**
+ * Load matches and user predictions when predictions page is shown
+ */
+async function loadMatches() {
+    try {
+        console.log('[PREDICTIONS] Loading matches and user predictions...');
+        
+        // Get user ID from localStorage
+        const userId = parseInt(localStorage.getItem('userId'));
+        if (!userId) {
+            console.warn('[PREDICTIONS] User ID not found in localStorage');
         }
+        
+        // Fetch matches from API
+        const matchesResponse = await fetchMatches();
+        
+        if (!matchesResponse.matches || matchesResponse.matches.length === 0) {
+            console.log('[PREDICTIONS] No matches found');
+            document.getElementById('matchesLoadingContainer').style.display = 'none';
+            document.getElementById('noMatchesContainer').style.display = 'block';
+            return;
+        }
+        
+        matchesData = matchesResponse.matches;
+        console.log('[PREDICTIONS] Loaded', matchesData.length, 'matches');
+        
+        // Fetch user's existing predictions if user is authenticated
+        if (userId) {
+            try {
+                const predictionsResponse = await fetchUserPredictions(userId);
+                if (predictionsResponse.predictions && predictionsResponse.predictions.length > 0) {
+                    // Build a map of predictions by match_id for quick lookup
+                    predictionsResponse.predictions.forEach(pred => {
+                        userPredictions[pred.match_id] = {
+                            prediction_id: pred.prediction_id,
+                            predicted_home_score: pred.predicted_home_score,
+                            predicted_away_score: pred.predicted_away_score,
+                            points_earned: pred.points_earned
+                        };
+                    });
+                    console.log('[PREDICTIONS] Loaded', Object.keys(userPredictions).length, 'existing predictions');
+                }
+            } catch (error) {
+                console.warn('[PREDICTIONS] Could not load existing predictions:', error);
+                // Continue anyway - user can still make new predictions
+            }
+        }
+        
+        // Render matches
+        renderMatches();
+        
+        // Start timers for all matches
+        startAllTimers();
+        
+    } catch (error) {
+        console.error('[PREDICTIONS] Error loading matches:', error);
+        document.getElementById('matchesLoadingContainer').innerHTML = `
+            <div style="text-align: center; padding: 40px;">
+                <i class="fas fa-exclamation-circle" style="font-size: 2rem; color: #EF4444; margin-bottom: 15px;"></i>
+                <p style="color: #EF4444;">Error loading matches</p>
+                <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; margin-top: 10px;">${error.message}</p>
+                <button class="btn btn-primary" onclick="loadMatches()" style="margin-top: 20px;">
+                    <i class="fas fa-redo"></i> Retry
+                </button>
+            </div>
+        `;
     }
 }
 
-// Decrement score
-function decrementScore(inputId) {
-    const input = document.getElementById(inputId);
-    if (input) {
-        let value = parseInt(input.value) || 0;
-        if (value > 0) {
-            input.value = value - 1;
-        }
-    }
-}
-
-// Submit all predictions
-function submitPredictions() {
-    const predictions = [];
-    let allValid = true;
-
-    // Collect all predictions
-    MATCHES.forEach(match => {
-        const team1Input = document.getElementById(
-            `match_${match.id}_team1`
-        );
-        const team2Input = document.getElementById(
-            `match_${match.id}_team2`
-        );
-
-        if (team1Input && team2Input) {
-            const team1Score = parseInt(team1Input.value) || 0;
-            const team2Score = parseInt(team2Input.value) || 0;
-
-            // Save to localStorage
-            const matchKey = `match_${match.id}`;
-            localStorage.setItem(matchKey, JSON.stringify({
-                matchId: match.id,
-                team1: match.team1.name,
-                team2: match.team2.name,
-                team1Score: team1Score,
-                team2Score: team2Score,
-                submittedAt: new Date().toISOString()
-            }));
-
-            predictions.push({
-                matchId: match.id,
-                team1: match.team1.name,
-                team2: match.team2.name,
-                team1Score: team1Score,
-                team2Score: team2Score
-            });
-        }
-    });
-
-    // Save all predictions to localStorage
-    localStorage.setItem('allPredictions', JSON.stringify(predictions));
-
-    // Show success message
-    alert(
-        `✅ Predictions submitted successfully!\n\n` +
-        `You have made predictions for ${predictions.length} matches.\n\n` +
-        `Note: This is saved locally. When backend is ready, ` +
-        `these will be sent to the server.`
-    );
-
-    // Log for debugging
-    console.log('All Predictions:', predictions);
-}
-
-// Open prediction history
-function openHistory() {
-    const allPredictions = JSON.parse(
-        localStorage.getItem('allPredictions') || '[]'
-    );
+/**
+ * Render all matches
+ */
+function renderMatches() {
+    const container = document.getElementById('matchesContainer');
     
-    if (allPredictions.length === 0) {
-        alert('No predictions submitted yet.');
-        return;
-    }
+    if (!container) return;
+    
+    let html = '';
+    
+    matchesData.forEach(match => {
+        const matchState = getMatchState(match);
+        const isLocked = matchState.isLocked;
+        const isFinished = matchState.isFinished;
+        
+        // Get user's existing prediction if any
+        const existingPrediction = userPredictions[match.match_id] || {};
+        const userHomeScore = existingPrediction.predicted_home_score || '';
+        const userAwayScore = existingPrediction.predicted_away_score || '';
+        
+        // Format match date to Ireland timezone
+        const matchDate = new Date(match.match_date_utc);
+        const formattedDate = matchDate.toLocaleString('en-IE', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'Europe/Dublin'
+        });
+        
+        // Determine card styling based on state
+        let cardClass = 'match-card fadeInUp';
+        if (isLocked) cardClass += ' match-locked';
+        if (isFinished) cardClass += ' match-finished';
+        
+        html += `
+            <div class="${cardClass}" id="match-${match.match_id}">
+                <div class="match-header">
+                    <div class="match-title">
+                        ${match.home_team} vs ${match.away_team}
+                    </div>
+                    <div class="match-date">
+                        ${formattedDate}
+                    </div>
+                </div>
 
-    let historyHTML = '<div style="padding: 20px;">';
-    allPredictions.forEach(pred => {
-        historyHTML += `
-            <div style="
-                background: rgba(255,255,255,0.05); 
-                padding: 15px; 
-                margin: 10px 0; 
-                border-radius: 8px; 
-                border-left: 4px solid #86BC25;
-            ">
-                <strong>
-                    ${pred.team1} ${pred.team1Score} - 
-                    ${pred.team2Score} ${pred.team2}
-                </strong>
+                <div class="match-timer-section">
+                    <div class="timer-display" id="timer-${match.match_id}">
+                        ${matchState.timerText}
+                    </div>
+                    ${isLocked && !isFinished ? '<div class="match-locked-badge"><i class="fas fa-lock"></i> Match Locked</div>' : ''}
+                    ${isFinished ? '<div class="match-finished-badge"><i class="fas fa-play-circle"></i> Match In Progress</div>' : ''}
+                </div>
+
+                <div class="match-prediction">
+                    <div class="team-section">
+                        <div class="team-name">${match.home_team}</div>
+                        <input 
+                            type="number" 
+                            class="score-input" 
+                            id="score-${match.match_id}-home" 
+                            value="${userHomeScore}" 
+                            min="0" 
+                            max="20"
+                            ${isLocked || isFinished ? 'disabled' : ''}
+                            placeholder="0"
+                        >
+                        <div class="score-controls" ${isLocked || isFinished ? 'style="opacity: 0.5; pointer-events: none;"' : ''}>
+                            <button 
+                                class="score-btn" 
+                                onclick="decrementScore('score-${match.match_id}-home')"
+                                ${isLocked || isFinished ? 'disabled' : ''}
+                            >
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button 
+                                class="score-btn" 
+                                onclick="incrementScore('score-${match.match_id}-home')"
+                                ${isLocked || isFinished ? 'disabled' : ''}
+                            >
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="vs-divider">VS</div>
+                    
+                    <div class="team-section">
+                        <div class="team-name">${match.away_team}</div>
+                        <input 
+                            type="number" 
+                            class="score-input" 
+                            id="score-${match.match_id}-away" 
+                            value="${userAwayScore}" 
+                            min="0" 
+                            max="20"
+                            ${isLocked || isFinished ? 'disabled' : ''}
+                            placeholder="0"
+                        >
+                        <div class="score-controls" ${isLocked || isFinished ? 'style="opacity: 0.5; pointer-events: none;"' : ''}>
+                            <button 
+                                class="score-btn" 
+                                onclick="decrementScore('score-${match.match_id}-away')"
+                                ${isLocked || isFinished ? 'disabled' : ''}
+                            >
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button 
+                                class="score-btn" 
+                                onclick="incrementScore('score-${match.match_id}-away')"
+                                ${isLocked || isFinished ? 'disabled' : ''}
+                            >
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                ${isFinished ? `
+                    <div class="actual-score-section">
+                        <div class="actual-score-label">Final Score</div>
+                        <div class="actual-score">
+                            ${match.home_score !== null ? match.home_score : '-'} - ${match.away_score !== null ? match.away_score : '-'}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <div class="match-actions">
+                    <button 
+                        class="btn btn-primary submit-prediction-btn" 
+                        id="btn-${match.match_id}"
+                        onclick="submitMatchPrediction('${match.match_id}')"
+                        ${isLocked || isFinished ? 'disabled' : ''}
+                    >
+                        <i class="fas fa-check"></i> ${existingPrediction.prediction_id ? 'Update Prediction' : 'Submit Prediction'}
+                    </button>
+                    <div class="submission-feedback" id="feedback-${match.match_id}"></div>
+                </div>
             </div>
         `;
     });
-    historyHTML += '</div>';
-
-    // Display in modal or alert
-    alert(
-        `Your Predictions:\n\n` +
-        allPredictions
-            .map(p => 
-                `${p.team1} ${p.team1Score} - ${p.team2Score} ${p.team2}`
-            )
-            .join('\n')
-    );
+    
+    container.innerHTML = html;
+    container.style.display = 'block';
+    document.getElementById('matchesLoadingContainer').style.display = 'none';
 }
+
+/**
+ * Get match state (upcoming, locked, finished)
+ * FIXED: Timer now returns proper D/H/M/S format
+ */
+function getMatchState(match) {
+    const now = new Date();
+    const matchTime = new Date(match.match_date_utc);
+    const deadlineTime = new Date(matchTime.getTime() - (2 * 60 * 60 * 1000)); // 2 hours before
+    
+    const isFinished = match.status === 'finished' || match.status === 'in_progress';
+    const isLocked = now >= deadlineTime;
+    
+    let timerText = '';
+    
+    if (isFinished) {
+        timerText = '<i class="fas fa-play-circle"></i> Match In Progress';
+    } else if (isLocked) {
+        timerText = '<i class="fas fa-lock"></i> Match Locked';
+    } else {
+        // Calculate time remaining
+        const timeRemaining = deadlineTime - now;
+        timerText = formatTimeRemaining(timeRemaining);
+    }
+    
+    return {
+        isLocked,
+        isFinished,
+        timerText
+    };
+}
+
+/**
+ * Format time remaining in D/H/M/S format
+ * FIXED: Properly formats countdown timer
+ * Examples: "2d 5h 30m 15s" or "5h 30m 15s" (no days if 0)
+ */
+function formatTimeRemaining(milliseconds) {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    
+    const days = Math.floor(totalSeconds / (24 * 60 * 60));
+    const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60));
+    const minutes = Math.floor((totalSeconds % (60 * 60)) / 60);
+    const seconds = totalSeconds % 60;
+    
+    let timeString = '<i class="fas fa-hourglass-end"></i> ';
+    
+    if (days > 0) {
+        timeString += `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    } else {
+        timeString += `${hours}h ${minutes}m ${seconds}s`;
+    }
+    
+    return timeString;
+}
+
+/**
+ * Start timers for all matches
+ */
+function startAllTimers() {
+    // Clear existing intervals
+    Object.values(timerIntervals).forEach(interval => clearInterval(interval));
+    timerIntervals = {};
+    
+    // Start new intervals for each match
+    matchesData.forEach(match => {
+        updateTimer(match.match_id);
+        
+        timerIntervals[match.match_id] = setInterval(() => {
+            updateTimer(match.match_id);
+        }, 1000); // Update every second
+    });
+}
+
+/**
+ * Update timer for a specific match
+ */
+function updateTimer(matchId) {
+    const match = matchesData.find(m => m.match_id === matchId);
+    if (!match) return;
+    
+    const timerElement = document.getElementById(`timer-${matchId}`);
+    if (!timerElement) return;
+    
+    const matchState = getMatchState(match);
+    const matchCard = document.getElementById(`match-${matchId}`);
+    const submitBtn = document.getElementById(`btn-${matchId}`);
+    
+    // Update timer text
+    timerElement.innerHTML = matchState.timerText;
+    
+    // Update card state
+    if (matchState.isLocked && !matchCard.classList.contains('match-locked')) {
+        matchCard.classList.add('match-locked');
+        
+        // Disable inputs
+        const homeInput = document.getElementById(`score-${matchId}-home`);
+        const awayInput = document.getElementById(`score-${matchId}-away`);
+        if (homeInput) homeInput.disabled = true;
+        if (awayInput) awayInput.disabled = true;
+        
+        // Disable button
+        if (submitBtn) submitBtn.disabled = true;
+        
+        // Show locked badge
+        if (!timerElement.parentElement.querySelector('.match-locked-badge')) {
+            const badge = document.createElement('div');
+            badge.className = 'match-locked-badge';
+            badge.innerHTML = '<i class="fas fa-lock"></i> Match Locked';
+            timerElement.parentElement.appendChild(badge);
+        }
+    }
+    
+    if (matchState.isFinished && !matchCard.classList.contains('match-finished')) {
+        matchCard.classList.add('match-finished');
+        
+        // Disable inputs
+        const homeInput = document.getElementById(`score-${matchId}-home`);
+        const awayInput = document.getElementById(`score-${matchId}-away`);
+        if (homeInput) homeInput.disabled = true;
+        if (awayInput) awayInput.disabled = true;
+        
+        // Disable button
+        if (submitBtn) submitBtn.disabled = true;
+    }
+}
+
+/**
+ * Increment score
+ */
+function incrementScore(inputId) {
+    const input = document.getElementById(inputId);
+    if (input && !input.disabled) {
+        let value = parseInt(input.value) || 0;
+        if (value < 20) {
+            input.value = value + 1;
+            animateScoreChange(input);
+        }
+    }
+}
+
+/**
+ * Decrement score
+ */
+function decrementScore(inputId) {
+    const input = document.getElementById(inputId);
+    if (input && !input.disabled) {
+        let value = parseInt(input.value) || 0;
+        if (value > 0) {
+            input.value = value - 1;
+            animateScoreChange(input);
+        }
+    }
+}
+
+/**
+ * Animate score change
+ */
+function animateScoreChange(input) {
+    input.style.transform = 'scale(1.2)';
+    input.style.borderColor = '#86BC25';
+    setTimeout(() => {
+        input.style.transform = 'scale(1)';
+        input.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+    }, 200);
+}
+
+/**
+ * Submit prediction for a specific match
+ */
+async function submitMatchPrediction(matchId) {
+    try {
+        const match = matchesData.find(m => m.match_id === matchId);
+        if (!match) {
+            alert('Match not found');
+            return;
+        }
+        
+        // Check if match is locked
+        const matchState = getMatchState(match);
+        if (matchState.isLocked || matchState.isFinished) {
+            alert('Cannot submit prediction for this match');
+            return;
+        }
+        
+        // Get scores
+        const homeScore = document.getElementById(`score-${matchId}-home`).value;
+        const awayScore = document.getElementById(`score-${matchId}-away`).value;
+        
+        // Validate
+        if (homeScore === '' || awayScore === '') {
+            alert('Please enter both scores');
+            return;
+        }
+        
+        const homeScoreInt = parseInt(homeScore);
+        const awayScoreInt = parseInt(awayScore);
+        
+        if (homeScoreInt < 0 || homeScoreInt > 20 || awayScoreInt < 0 || awayScoreInt > 20) {
+            alert('Scores must be between 0 and 20');
+            return;
+        }
+        
+        // Get user data
+        const userId = parseInt(localStorage.getItem('userId'));
+        if (!userId) {
+            alert('User not authenticated');
+            return;
+        }
+        
+        // Show loading state
+        const button = document.getElementById(`btn-${matchId}`);
+        const feedback = document.getElementById(`feedback-${matchId}`);
+        const originalText = button.innerHTML;
+        
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+        button.disabled = true;
+        
+        // Submit prediction
+        const response = await submitPrediction(userId, matchId, homeScoreInt, awayScoreInt);
+        
+        if (response.status === 'success') {
+            // Store prediction locally
+            userPredictions[matchId] = {
+                prediction_id: response.prediction_id || Date.now(),
+                predicted_home_score: homeScoreInt,
+                predicted_away_score: awayScoreInt
+            };
+            
+            // Show success message
+            feedback.innerHTML = '<div class="success-message"><i class="fas fa-check-circle"></i> Prediction saved!</div>';
+            feedback.style.display = 'block';
+            
+            // Update button text
+            button.innerHTML = '<i class="fas fa-check"></i> Update Prediction';
+            button.disabled = false;
+            
+            // Clear feedback after 3 seconds
+            setTimeout(() => {
+                feedback.style.display = 'none';
+            }, 3000);
+            
+            console.log('[PREDICTIONS] Prediction submitted successfully');
+        } else {
+            throw new Error(response.message || 'Failed to submit prediction');
+        }
+        
+    } catch (error) {
+        console.error('[PREDICTIONS] Error submitting prediction:', error);
+        
+        const button = document.getElementById(`btn-${matchId}`);
+        const feedback = document.getElementById(`feedback-${matchId}`);
+        
+        feedback.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-circle"></i> ${error.message}</div>`;
+        feedback.style.display = 'block';
+        
+        button.innerHTML = '<i class="fas fa-check"></i> Submit Prediction';
+        button.disabled = false;
+        
+        // Clear feedback after 5 seconds
+        setTimeout(() => {
+            feedback.style.display = 'none';
+        }, 5000);
+    }
+}
+
+/**
+ * Open prediction history
+ */
+function openHistory() {
+    alert('📊 Prediction History\n\nYour predictions will be displayed here once you make some!');
+}
+
+/**
+ * Auto-load matches when predictions page is shown
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    const observer = new MutationObserver(function(mutations) {
+        const predictionsPage = document.getElementById('scoreGuesserPage');
+        if (predictionsPage && predictionsPage.classList.contains('active')) {
+            // Load matches after a short delay to ensure DOM is ready
+            setTimeout(loadMatches, 100);
+        }
+    });
+    
+    observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+});
