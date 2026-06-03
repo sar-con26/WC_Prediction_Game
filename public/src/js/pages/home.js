@@ -328,13 +328,21 @@ function generateUserPositionHTML(leaderboard, userId, userName) {
 
 /**
  * Open prediction history modal
+ * Fetches user's finished predictions with accuracy calculations
  */
 async function openHistory() {
     try {
         const userId = parseInt(localStorage.getItem('userId'));
+        const jwtToken = localStorage.getItem('jwt_token');
         
         if (!userId) {
             alert('User not authenticated');
+            return;
+        }
+        
+        if (!jwtToken) {
+            alert('Session expired. Please login again.');
+            showPage('loginPage');
             return;
         }
         
@@ -357,12 +365,28 @@ async function openHistory() {
         `;
         
         // Fetch prediction history
-        const predictions = await fetchPredictionHistory(userId);
+        console.log('[HISTORY] Fetching prediction history for user:', userId);
         
-        // Check if predictions is an array or has a predictions property
-        const predictionsList = Array.isArray(predictions) ? predictions : (predictions.predictions || []);
+        const response = await fetch(`/api/prediction-history/${userId}?page=1&limit=20`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${jwtToken}`
+            }
+        });
         
-        if (predictionsList.length === 0) {
+        console.log('[HISTORY] Response status:', response.status);
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('[HISTORY] Data received:', data);
+        
+        // Check if we have predictions
+        if (!data.predictions || data.predictions.length === 0) {
             historyItems.innerHTML = `
                 <div style="text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.6);">
                     <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 15px; opacity: 0.5;"></i>
@@ -376,7 +400,8 @@ async function openHistory() {
         // Render predictions
         let html = '<div class="history-list">';
         
-        predictionsList.forEach(pred => {
+        data.predictions.forEach(pred => {
+            // Format match date
             const matchDate = new Date(pred.match_date_utc);
             const formattedDate = matchDate.toLocaleString('en-IE', {
                 weekday: 'short',
@@ -387,7 +412,23 @@ async function openHistory() {
                 timeZone: 'Europe/Dublin'
             });
             
-            const pointsClass = pred.points_earned > 0 ? 'points-positive' : 'points-zero';
+            // Determine accuracy color
+            let accuracyColor = '#EF4444';  // Red for 0%
+            let accuracyLabel = 'Incorrect';
+            
+            if (pred.accuracy === 100) {
+                accuracyColor = '#10B981';  // Green
+                accuracyLabel = 'Perfect!';
+            } else if (pred.accuracy === 66) {
+                accuracyColor = '#F59E0B';  // Amber
+                accuracyLabel = 'Close!';
+            } else if (pred.accuracy === 33) {
+                accuracyColor = '#F97316';  // Orange
+                accuracyLabel = 'Partial';
+            }
+            
+            // Determine points badge color
+            const pointsColor = pred.points_earned > 0 ? '#10B981' : 'rgba(255, 255, 255, 0.5)';
             
             html += `
                 <div class="history-item">
@@ -408,12 +449,19 @@ async function openHistory() {
                         
                         <div class="score-section">
                             <div class="score-label">Actual Result</div>
-                            <div class="score-value">${pred.home_score !== null ? pred.home_score : '-'} - ${pred.away_score !== null ? pred.away_score : '-'}</div>
+                            <div class="score-value">${pred.home_score} - ${pred.away_score}</div>
                         </div>
                         
                         <div class="score-section">
                             <div class="score-label">Points</div>
-                            <div class="score-value ${pointsClass}">${pred.points_earned || 0}</div>
+                            <div class="score-value" style="color: ${pointsColor};">${pred.points_earned}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="accuracy-section">
+                        <div class="accuracy-label">Accuracy: <span style="color: ${accuracyColor}; font-weight: 700;">${pred.accuracy}%</span> (${accuracyLabel})</div>
+                        <div class="accuracy-bar-container">
+                            <div class="accuracy-bar" style="width: ${pred.accuracy}%; background-color: ${accuracyColor};"></div>
                         </div>
                     </div>
                 </div>
@@ -421,20 +469,197 @@ async function openHistory() {
         });
         
         html += '</div>';
+        
+        // Add pagination if needed
+        if (data.pagination && data.pagination.has_more) {
+            html += `
+                <div style="text-align: center; padding: 20px; margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="loadMoreHistory(2)" style="max-width: 300px;">
+                        <i class="fas fa-arrow-down"></i> Load More
+                    </button>
+                </div>
+            `;
+        }
+        
         historyItems.innerHTML = html;
         
     } catch (error) {
-        console.error('Error opening history:', error);
+        console.error('[HISTORY] Error opening history:', error);
         const historyItems = document.getElementById('historyItems');
+        
+        let errorMessage = error.message;
+        let errorIcon = 'fa-exclamation-circle';
+        
+        if (error.message.includes('401')) {
+            errorMessage = 'Session expired. Please login again.';
+            errorIcon = 'fa-lock';
+        } else if (error.message.includes('403')) {
+            errorMessage = 'You do not have permission to view this history.';
+            errorIcon = 'fa-ban';
+        } else if (error.message.includes('404')) {
+            errorMessage = 'User not found.';
+            errorIcon = 'fa-user-slash';
+        }
+        
         historyItems.innerHTML = `
             <div style="text-align: center; padding: 40px; color: #EF4444;">
-                <i class="fas fa-exclamation-circle" style="font-size: 2rem; margin-bottom: 15px;"></i>
+                <i class="fas ${errorIcon}" style="font-size: 2rem; margin-bottom: 15px;"></i>
                 <p>Error loading prediction history</p>
-                <p style="font-size: 0.9rem; margin-top: 10px;">${error.message}</p>
+                <p style="font-size: 0.9rem; margin-top: 10px;">${errorMessage}</p>
+                <button class="btn btn-primary" onclick="openHistory()" style="margin-top: 20px; max-width: 200px;">
+                    <i class="fas fa-redo"></i> Retry
+                </button>
             </div>
         `;
     }
 }
+
+/**
+ * Load more predictions (pagination)
+ * @param {number} page - Page number to load
+ */
+async function loadMoreHistory(page) {
+    try {
+        const userId = parseInt(localStorage.getItem('userId'));
+        const jwtToken = localStorage.getItem('jwt_token');
+        
+        if (!userId || !jwtToken) {
+            alert('Session expired. Please login again.');
+            return;
+        }
+        
+        console.log('[HISTORY] Loading page:', page);
+        
+        const response = await fetch(`/api/prediction-history/${userId}?page=${page}&limit=20`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${jwtToken}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('[HISTORY] Page data received:', data);
+        
+        // Get current history list
+        const historyList = document.querySelector('.history-list');
+        if (!historyList) {
+            console.error('[HISTORY] History list not found');
+            return;
+        }
+        
+        // Render new predictions
+        let html = '';
+        
+        data.predictions.forEach(pred => {
+            const matchDate = new Date(pred.match_date_utc);
+            const formattedDate = matchDate.toLocaleString('en-IE', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'Europe/Dublin'
+            });
+            
+            let accuracyColor = '#EF4444';
+            let accuracyLabel = 'Incorrect';
+            
+            if (pred.accuracy === 100) {
+                accuracyColor = '#10B981';
+                accuracyLabel = 'Perfect!';
+            } else if (pred.accuracy === 66) {
+                accuracyColor = '#F59E0B';
+                accuracyLabel = 'Close!';
+            } else if (pred.accuracy === 33) {
+                accuracyColor = '#F97316';
+                accuracyLabel = 'Partial';
+            }
+            
+            const pointsColor = pred.points_earned > 0 ? '#10B981' : 'rgba(255, 255, 255, 0.5)';
+            
+            html += `
+                <div class="history-item">
+                    <div class="history-match">
+                        <div class="history-teams">
+                            <span class="team-name">${pred.home_team}</span>
+                            <span class="vs">vs</span>
+                            <span class="team-name">${pred.away_team}</span>
+                        </div>
+                        <div class="history-date">${formattedDate}</div>
+                    </div>
+                    
+                    <div class="history-scores">
+                        <div class="score-section">
+                            <div class="score-label">Your Prediction</div>
+                            <div class="score-value">${pred.predicted_home_score} - ${pred.predicted_away_score}</div>
+                        </div>
+                        
+                        <div class="score-section">
+                            <div class="score-label">Actual Result</div>
+                            <div class="score-value">${pred.home_score} - ${pred.away_score}</div>
+                        </div>
+                        
+                        <div class="score-section">
+                            <div class="score-label">Points</div>
+                            <div class="score-value" style="color: ${pointsColor};">${pred.points_earned}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="accuracy-section">
+                        <div class="accuracy-label">Accuracy: <span style="color: ${accuracyColor}; font-weight: 700;">${pred.accuracy}%</span> (${accuracyLabel})</div>
+                        <div class="accuracy-bar-container">
+                            <div class="accuracy-bar" style="width: ${pred.accuracy}%; background-color: ${accuracyColor};"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        // Append new items
+        historyList.innerHTML += html;
+        
+        // Update or remove "Load More" button
+        const loadMoreBtn = document.querySelector('[onclick*="loadMoreHistory"]');
+        if (loadMoreBtn) {
+            if (data.pagination.has_more) {
+                loadMoreBtn.onclick = () => loadMoreHistory(page + 1);
+            } else {
+                loadMoreBtn.parentElement.innerHTML = '<p style="text-align: center; color: rgba(255, 255, 255, 0.6); margin-top: 20px;">No more predictions to load</p>';
+            }
+        }
+        
+    } catch (error) {
+        console.error('[HISTORY] Error loading more predictions:', error);
+        alert('Error loading more predictions: ' + error.message);
+    }
+}
+
+/**
+ * Close history modal
+ */
+function closeHistory() {
+    const modal = document.getElementById('historyModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Close modal when clicking outside
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('historyModal');
+    if (modal) {
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                closeHistory();
+            }
+        });
+    }
+});
 
 /**
  * Close history modal

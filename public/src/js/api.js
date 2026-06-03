@@ -1,4 +1,4 @@
-// api.js - FINAL VERSION WITH PREDICTION HISTORY
+// api.js - UPDATED WITH ADMIN FUNCTIONS
 // API Service for communicating with Flask backend
 // Includes functions for match fetching, prediction submission, user prediction retrieval, and prediction history
 
@@ -111,6 +111,7 @@ function logoutUser() {
     localStorage.removeItem('assignedTeam');
     localStorage.removeItem('predictions');
     localStorage.removeItem('predictionState');
+    localStorage.removeItem('isAdmin');
 }
 
 /**
@@ -401,6 +402,128 @@ async function getUserStats(userId, jwtToken) {
         return data;
     } catch (error) {
         console.error('User stats error:', error);
+        throw error;
+    }
+}
+
+// ============================================================================
+// ADMIN FUNCTIONS
+// ============================================================================
+
+/**
+ * Submit admin score entry
+ * @param {Object} scoreData - Score entry data
+ * @returns {Promise} Response from server
+ */
+async function submitAdminScore(scoreData) {
+    try {
+        console.log('[API] Submitting admin score:', scoreData);
+        
+        const response = await fetch(`${API_BASE_URL}/admin/enter-score`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(scoreData)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to submit score');
+        }
+
+        console.log('[API] Score submitted successfully:', data);
+        return data;
+    } catch (error) {
+        console.error('[API] Submit score error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Fetch all users for admin
+ * @returns {Promise} All users data
+ */
+async function fetchAllUsers() {
+    try {
+        console.log('[API] Fetching all users');
+        
+        const response = await fetch(`${API_BASE_URL}/admin/users`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch users');
+        }
+
+        console.log('[API] Users fetched successfully:', data);
+        return data;
+    } catch (error) {
+        console.error('[API] Fetch users error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Fetch all predictions for admin
+ * @returns {Promise} All predictions data
+ */
+async function fetchAllPredictions() {
+    try {
+        console.log('[API] Fetching all predictions');
+        
+        const response = await fetch(`${API_BASE_URL}/admin/predictions`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch predictions');
+        }
+
+        console.log('[API] Predictions fetched successfully:', data);
+        return data;
+    } catch (error) {
+        console.error('[API] Fetch predictions error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Fetch admin leaderboard
+ * @returns {Promise} Leaderboard data
+ */
+async function fetchAdminLeaderboard() {
+    try {
+        console.log('[API] Fetching admin leaderboard');
+        
+        const response = await fetch(`${API_BASE_URL}/admin/leaderboard`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch leaderboard');
+        }
+
+        console.log('[API] Leaderboard fetched successfully:', data);
+        return data;
+    } catch (error) {
+        console.error('[API] Fetch leaderboard error:', error);
         throw error;
     }
 }

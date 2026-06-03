@@ -1,7 +1,7 @@
 """
-Flask Backend for World Cup Prediction Game
+Flask Backend for World Cup Prediction Game - ADMIN UPDATED
 FINAL VERSION: Uses Lambda for ALL database queries (no direct DB connection)
-Includes prediction history endpoint
+Includes admin endpoints for score entry, users, predictions, and leaderboard
 """
 
 import os
@@ -36,6 +36,13 @@ LAMBDA_LEADERBOARD_URL = os.getenv('LAMBDA_LEADERBOARD_URL')
 LAMBDA_MATCHES_URL = os.getenv('LAMBDA_MATCHES_URL')
 LAMBDA_SCORE_PREDICTION_URL = os.getenv('LAMBDA_SCORE_PREDICTION_URL')
 LAMBDA_USER_PREDICTIONS_URL = os.getenv('LAMBDA_USER_PREDICTIONS_URL')
+LAMBDA_PREDICTION_HISTORY_URL = os.getenv('LAMBDA_PREDICTION_HISTORY_URL')
+
+# Admin Lambda URLs
+LAMBDA_ADMIN_SCORE_ENTRY_URL = os.getenv('LAMBDA_ADMIN_SCORE_ENTRY_URL')
+LAMBDA_ADMIN_USERS_URL = os.getenv('LAMBDA_ADMIN_USERS_URL')
+LAMBDA_ADMIN_PREDICTIONS_URL = os.getenv('LAMBDA_ADMIN_PREDICTIONS_URL')
+LAMBDA_ADMIN_LEADERBOARD_URL = os.getenv('LAMBDA_ADMIN_LEADERBOARD_URL')
 
 # Log startup
 logger.info("=" * 60)
@@ -47,6 +54,7 @@ logger.info(f"Public Directory Exists: {os.path.exists(PUBLIC_DIR)}")
 logger.info(f"Index.html Exists: {os.path.exists(os.path.join(PUBLIC_DIR, 'index.html'))}")
 logger.info(f"Matches Lambda URL: {LAMBDA_MATCHES_URL}")
 logger.info(f"User Predictions Lambda URL: {LAMBDA_USER_PREDICTIONS_URL}")
+logger.info(f"Admin Score Entry Lambda URL: {LAMBDA_ADMIN_SCORE_ENTRY_URL}")
 logger.info("=" * 60)
 
 
@@ -215,14 +223,14 @@ def submit_prediction():
                 return lambda_response, response.status_code
         
         except requests.exceptions.Timeout:
-            logger.error("[PREDICT] Lambda request timed out (30 seconds)")
+            logger.error("[PREDICT] Lambda request timed out")
             return jsonify({
                 'status': 'error',
                 'message': 'Lambda request timed out',
                 'error_code': 'TIMEOUT'
             }), 504
         
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
             logger.error(f"[PREDICT] Lambda request failed: {str(e)}")
             return jsonify({
                 'status': 'error',
@@ -238,10 +246,6 @@ def submit_prediction():
         }), 500
 
     
-# ============================================================================
-# ENDPOINT: GET /api/user-predictions/<user_id> - USES LAMBDA (NOT DB)
-# ============================================================================
-
 @app.route('/api/user-predictions/<int:user_id>', methods=['GET'])
 def get_user_predictions(user_id):
     try:
@@ -288,27 +292,23 @@ def get_user_predictions(user_id):
         return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
 
 
-# ============================================================================
-# ENDPOINT: GET /api/prediction-history/<user_id> - PREDICTION HISTORY
-# ============================================================================
-
 @app.route('/api/prediction-history/<int:user_id>', methods=['GET'])
 def get_prediction_history(user_id):
     try:
         logger.info(f"[GET_PREDICTION_HISTORY] Fetching finished predictions for user: {user_id}")
         
-        if not LAMBDA_USER_PREDICTIONS_URL:
+        if not LAMBDA_PREDICTION_HISTORY_URL:
             logger.error("[GET_PREDICTION_HISTORY] Lambda URL not configured")
             return jsonify({'status': 'error', 'message': 'Lambda URL not configured'}), 500
         
-        logger.info(f"[GET_PREDICTION_HISTORY] Forwarding to Lambda: {LAMBDA_USER_PREDICTIONS_URL}")
+        logger.info(f"[GET_PREDICTION_HISTORY] Forwarding to Lambda: {LAMBDA_PREDICTION_HISTORY_URL}")
         
         try:
             response = requests.post(
-                LAMBDA_USER_PREDICTIONS_URL,
+                LAMBDA_PREDICTION_HISTORY_URL,
                 json={
                     'body': json.dumps({
-                        'action': 'fetch_finished_predictions',
+                        'action': 'fetch_prediction_history',
                         'user_id': user_id
                     })
                 },
@@ -578,6 +578,175 @@ def leaderboard():
             'status': 'error',
             'message': 'Internal server error'
         }), 500
+
+
+# ============================================================================
+# ADMIN ROUTES
+# ============================================================================
+
+@app.route('/api/admin/enter-score', methods=['POST'])
+def admin_enter_score():
+    """Forward admin score entry to Lambda"""
+    try:
+        logger.info("[ADMIN_SCORE] Score entry request received")
+        
+        data = request.get_json()
+        
+        if not data:
+            logger.error("[ADMIN_SCORE] Missing request body")
+            return jsonify({'status': 'error', 'message': 'Missing request body'}), 400
+        
+        if not LAMBDA_ADMIN_SCORE_ENTRY_URL:
+            logger.error("[ADMIN_SCORE] Lambda URL not configured")
+            return jsonify({'status': 'error', 'message': 'Lambda URL not configured'}), 500
+        
+        lambda_event = {'body': json.dumps(data)}
+        
+        logger.info(f"[ADMIN_SCORE] Forwarding to Lambda: {LAMBDA_ADMIN_SCORE_ENTRY_URL}")
+        
+        try:
+            response = requests.post(
+                LAMBDA_ADMIN_SCORE_ENTRY_URL,
+                json=lambda_event,
+                timeout=30
+            )
+            
+            lambda_response = response.json()
+            
+            if 'body' in lambda_response:
+                try:
+                    actual_response = json.loads(lambda_response['body'])
+                    status_code = lambda_response.get('statusCode', 200)
+                    return actual_response, status_code
+                except json.JSONDecodeError:
+                    return lambda_response, response.status_code
+            else:
+                return lambda_response, response.status_code
+        
+        except Exception as e:
+            logger.error(f"[ADMIN_SCORE] Lambda request failed: {str(e)}")
+            return jsonify({'status': 'error', 'message': 'Lambda request failed'}), 500
+    
+    except Exception as e:
+        logger.error(f"[ADMIN_SCORE] Unexpected error: {str(e)}", exc_info=True)
+        return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
+
+
+@app.route('/api/admin/users', methods=['GET'])
+def admin_get_users():
+    """Forward admin users request to Lambda"""
+    try:
+        logger.info("[ADMIN_USERS] Users request received")
+        
+        if not LAMBDA_ADMIN_USERS_URL:
+            logger.error("[ADMIN_USERS] Lambda URL not configured")
+            return jsonify({'status': 'error', 'message': 'Lambda URL not configured'}), 500
+        
+        logger.info(f"[ADMIN_USERS] Forwarding to Lambda: {LAMBDA_ADMIN_USERS_URL}")
+        
+        try:
+            response = requests.get(
+                LAMBDA_ADMIN_USERS_URL,
+                timeout=30
+            )
+            
+            lambda_response = response.json()
+            
+            if 'body' in lambda_response:
+                try:
+                    actual_response = json.loads(lambda_response['body'])
+                    status_code = lambda_response.get('statusCode', 200)
+                    return actual_response, status_code
+                except json.JSONDecodeError:
+                    return lambda_response, response.status_code
+            else:
+                return lambda_response, response.status_code
+        
+        except Exception as e:
+            logger.error(f"[ADMIN_USERS] Lambda request failed: {str(e)}")
+            return jsonify({'status': 'error', 'message': 'Lambda request failed'}), 500
+    
+    except Exception as e:
+        logger.error(f"[ADMIN_USERS] Unexpected error: {str(e)}", exc_info=True)
+        return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
+
+
+@app.route('/api/admin/predictions', methods=['GET'])
+def admin_get_predictions():
+    """Forward admin predictions request to Lambda"""
+    try:
+        logger.info("[ADMIN_PREDICTIONS] Predictions request received")
+        
+        if not LAMBDA_ADMIN_PREDICTIONS_URL:
+            logger.error("[ADMIN_PREDICTIONS] Lambda URL not configured")
+            return jsonify({'status': 'error', 'message': 'Lambda URL not configured'}), 500
+        
+        logger.info(f"[ADMIN_PREDICTIONS] Forwarding to Lambda: {LAMBDA_ADMIN_PREDICTIONS_URL}")
+        
+        try:
+            response = requests.get(
+                LAMBDA_ADMIN_PREDICTIONS_URL,
+                timeout=30
+            )
+            
+            lambda_response = response.json()
+            
+            if 'body' in lambda_response:
+                try:
+                    actual_response = json.loads(lambda_response['body'])
+                    status_code = lambda_response.get('statusCode', 200)
+                    return actual_response, status_code
+                except json.JSONDecodeError:
+                    return lambda_response, response.status_code
+            else:
+                return lambda_response, response.status_code
+        
+        except Exception as e:
+            logger.error(f"[ADMIN_PREDICTIONS] Lambda request failed: {str(e)}")
+            return jsonify({'status': 'error', 'message': 'Lambda request failed'}), 500
+    
+    except Exception as e:
+        logger.error(f"[ADMIN_PREDICTIONS] Unexpected error: {str(e)}", exc_info=True)
+        return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
+
+
+@app.route('/api/admin/leaderboard', methods=['GET'])
+def admin_get_leaderboard():
+    """Forward admin leaderboard request to Lambda"""
+    try:
+        logger.info("[ADMIN_LEADERBOARD] Leaderboard request received")
+        
+        if not LAMBDA_ADMIN_LEADERBOARD_URL:
+            logger.error("[ADMIN_LEADERBOARD] Lambda URL not configured")
+            return jsonify({'status': 'error', 'message': 'Lambda URL not configured'}), 500
+        
+        logger.info(f"[ADMIN_LEADERBOARD] Forwarding to Lambda: {LAMBDA_ADMIN_LEADERBOARD_URL}")
+        
+        try:
+            response = requests.get(
+                LAMBDA_ADMIN_LEADERBOARD_URL,
+                timeout=30
+            )
+            
+            lambda_response = response.json()
+            
+            if 'body' in lambda_response:
+                try:
+                    actual_response = json.loads(lambda_response['body'])
+                    status_code = lambda_response.get('statusCode', 200)
+                    return actual_response, status_code
+                except json.JSONDecodeError:
+                    return lambda_response, response.status_code
+            else:
+                return lambda_response, response.status_code
+        
+        except Exception as e:
+            logger.error(f"[ADMIN_LEADERBOARD] Lambda request failed: {str(e)}")
+            return jsonify({'status': 'error', 'message': 'Lambda request failed'}), 500
+    
+    except Exception as e:
+        logger.error(f"[ADMIN_LEADERBOARD] Unexpected error: {str(e)}", exc_info=True)
+        return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
 
 
 if __name__ == '__main__':

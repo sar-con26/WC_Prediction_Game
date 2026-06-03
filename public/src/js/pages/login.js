@@ -1,4 +1,4 @@
-// Login Page
+// Login Page - UPDATED TO STORE is_admin FLAG
 
 function createLoginPage() {
     return `
@@ -75,6 +75,10 @@ async function handleLogin(button) {
         localStorage.setItem('userName', response.username);
         localStorage.setItem('userEmail', response.email);
         localStorage.setItem('jwt_token', response.jwt_token);
+        
+        // IMPORTANT: Store the is_admin flag
+        localStorage.setItem('isAdmin', response.is_admin ? 'true' : 'false');
+        console.log('[LOGIN] Stored isAdmin flag:', response.is_admin ? 'true' : 'false');
 
         // Reset button
         button.innerHTML = originalText;

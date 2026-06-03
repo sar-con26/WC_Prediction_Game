@@ -1,20 +1,10 @@
-// Admin Section
-
-// List of admin emails
-const ADMIN_EMAILS = [
-    'admin@deloitte.ie',
-    'admin@deloitte.com',
-    'aodriscoll@deloitte.ie'
-];
+// Admin Dashboard - COMPLETE VERSION WITH DATABASE INTEGRATION
 
 // Check if user is admin
 function isUserAdmin() {
-    // TEMPORARILY ALLOW EVERYONE FOR TESTING
-    return true;
-    
-    // ORIGINAL CODE (uncomment to re-enable email check):
-    // const userEmail = localStorage.getItem('userEmail') || '';
-    // return ADMIN_EMAILS.includes(userEmail.toLowerCase());
+    const isAdmin = localStorage.getItem('isAdmin');
+    console.log('[ADMIN] isAdmin flag:', isAdmin);
+    return isAdmin === 'true';
 }
 
 // Create Admin Page
@@ -80,24 +70,19 @@ function createAdminPage() {
                     <div class="form-row">
                         <div class="form-group">
                             <label for="match-select">Select Match</label>
-                            <select id="match-select" class="form-input">
-                                <option value="">-- Select a match --</option>
-                                <option value="1">Brazil vs Morocco - June 15, 2026</option>
-                                <option value="2">Spain vs Germany - June 16, 2026</option>
-                                <option value="3">Argentina vs France - June 20, 2026</option>
-                                <option value="4">England vs Netherlands - June 21, 2026</option>
-                                <option value="5">Belgium vs Portugal - June 22, 2026</option>
+                            <select id="match-select" class="form-input" onchange="loadMatchDetails()">
+                                <option value="">-- Loading matches... --</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="team1-score">Team 1 Score</label>
+                            <label for="team1-score">Home Team Score</label>
                             <input type="number" id="team1-score" class="form-input" placeholder="0" min="0" max="20">
                         </div>
                         <div class="form-group">
-                            <label for="team2-score">Team 2 Score</label>
+                            <label for="team2-score">Away Team Score</label>
                             <input type="number" id="team2-score" class="form-input" placeholder="0" min="0" max="20">
                         </div>
                     </div>
@@ -108,54 +93,11 @@ function createAdminPage() {
                 </div>
 
                 <h3>Match Results</h3>
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Match</th>
-                            <th>Date</th>
-                            <th>Score</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Brazil vs Morocco</td>
-                            <td>June 15, 2026</td>
-                            <td><span class="score-badge">3 - 1</span></td>
-                            <td><span class="status-badge completed">Completed</span></td>
-                            <td><button class="btn-small"><i class="fas fa-edit"></i> Edit</button></td>
-                        </tr>
-                        <tr>
-                            <td>Spain vs Germany</td>
-                            <td>June 16, 2026</td>
-                            <td><span class="score-badge">2 - 2</span></td>
-                            <td><span class="status-badge completed">Completed</span></td>
-                            <td><button class="btn-small"><i class="fas fa-edit"></i> Edit</button></td>
-                        </tr>
-                        <tr>
-                            <td>Argentina vs France</td>
-                            <td>June 20, 2026</td>
-                            <td>-</td>
-                            <td><span class="status-badge pending">Pending</span></td>
-                            <td><button class="btn-small"><i class="fas fa-edit"></i> Edit</button></td>
-                        </tr>
-                        <tr>
-                            <td>England vs Netherlands</td>
-                            <td>June 21, 2026</td>
-                            <td>-</td>
-                            <td><span class="status-badge pending">Pending</span></td>
-                            <td><button class="btn-small"><i class="fas fa-edit"></i> Edit</button></td>
-                        </tr>
-                        <tr>
-                            <td>Belgium vs Portugal</td>
-                            <td>June 22, 2026</td>
-                            <td>-</td>
-                            <td><span class="status-badge pending">Pending</span></td>
-                            <td><button class="btn-small"><i class="fas fa-edit"></i> Edit</button></td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div id="match-results-container" style="min-height: 300px;">
+                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
+                        <i class="fas fa-spinner fa-spin"></i> Loading matches...
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -166,63 +108,14 @@ function createAdminPage() {
                 <p class="admin-subtitle">View and manage registered users</p>
                 
                 <div class="search-box">
-                    <input type="text" class="form-input" placeholder="Search users by name or email...">
+                    <input type="text" class="form-input" id="user-search" placeholder="Search users by name or email..." onkeyup="filterUsers()">
                 </div>
 
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Assigned Team</th>
-                            <th>Registration Date</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Sarah Connolly</td>
-                            <td>sarah.connolly@deloitte.ie</td>
-                            <td>🇪🇸 Spain</td>
-                            <td>May 20, 2026</td>
-                            <td><span class="status-badge active">Active</span></td>
-                            <td><button class="btn-small"><i class="fas fa-eye"></i> View</button></td>
-                        </tr>
-                        <tr>
-                            <td>Fawaz Bakinson</td>
-                            <td>fawaz.bakinson@deloitte.ie</td>
-                            <td>🇧🇷 Brazil</td>
-                            <td>May 19, 2026</td>
-                            <td><span class="status-badge active">Active</span></td>
-                            <td><button class="btn-small"><i class="fas fa-eye"></i> View</button></td>
-                        </tr>
-                        <tr>
-                            <td>Katelyn Hyde</td>
-                            <td>katelyn.hyde@deloitte.ie</td>
-                            <td>🇫🇷 France</td>
-                            <td>May 18, 2026</td>
-                            <td><span class="status-badge active">Active</span></td>
-                            <td><button class="btn-small"><i class="fas fa-eye"></i> View</button></td>
-                        </tr>
-                        <tr>
-                            <td>Manuel Mastrominico</td>
-                            <td>manuel.mastrominico@deloitte.ie</td>
-                            <td>🇦🇷 Argentina</td>
-                            <td>May 17, 2026</td>
-                            <td><span class="status-badge active">Active</span></td>
-                            <td><button class="btn-small"><i class="fas fa-eye"></i> View</button></td>
-                        </tr>
-                        <tr>
-                            <td>Bhavya Sharma</td>
-                            <td>bhavya.sharma@deloitte.ie</td>
-                            <td>🇩🇪 Germany</td>
-                            <td>May 16, 2026</td>
-                            <td><span class="status-badge active">Active</span></td>
-                            <td><button class="btn-small"><i class="fas fa-eye"></i> View</button></td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div id="users-container" style="min-height: 400px;">
+                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
+                        <i class="fas fa-spinner fa-spin"></i> Loading users...
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -233,185 +126,50 @@ function createAdminPage() {
                 <p class="admin-subtitle">View all user predictions and accuracy</p>
                 
                 <div class="filter-box">
-                    <select class="form-input" style="width: 100%; max-width: 300px;">
+                    <select class="form-input" id="prediction-filter" onchange="filterPredictions()" style="width: 100%; max-width: 300px;">
                         <option value="">-- All Predictions --</option>
+                        <option value="match">Match Scores</option>
                         <option value="tournament">Tournament Winner</option>
                         <option value="boot">Golden Boot</option>
                         <option value="glove">Golden Glove</option>
-                        <option value="match">Match Scores</option>
                     </select>
                 </div>
 
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>User</th>
-                            <th>Prediction Type</th>
-                            <th>Prediction</th>
-                            <th>Actual Result</th>
-                            <th>Points</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Sarah Connolly</td>
-                            <td><span class="badge-type tournament">Tournament</span></td>
-                            <td>Brazil</td>
-                            <td>Brazil</td>
-                            <td><span class="points-badge correct">+10</span></td>
-                            <td>May 20, 2026</td>
-                        </tr>
-                        <tr>
-                            <td>Fawaz Bakinson</td>
-                            <td><span class="badge-type boot">Golden Boot</span></td>
-                            <td>Kylian Mbappé</td>
-                            <td>Kylian Mbappé</td>
-                            <td><span class="points-badge correct">+8</span></td>
-                            <td>May 19, 2026</td>
-                        </tr>
-                        <tr>
-                            <td>Katelyn Hyde</td>
-                            <td><span class="badge-type match">Match Score</span></td>
-                            <td>Brazil 3-1 Morocco</td>
-                            <td>Brazil 3-1 Morocco</td>
-                            <td><span class="points-badge correct">+5</span></td>
-                            <td>May 18, 2026</td>
-                        </tr>
-                        <tr>
-                            <td>Manuel Mastrominico</td>
-                            <td><span class="badge-type glove">Golden Glove</span></td>
-                            <td>Gianluigi Donnarumma</td>
-                            <td>Alisson</td>
-                            <td><span class="points-badge">0</span></td>
-                            <td>May 17, 2026</td>
-                        </tr>
-                        <tr>
-                            <td>Bhavya Sharma</td>
-                            <td><span class="badge-type match">Match Score</span></td>
-                            <td>Spain 2-2 Germany</td>
-                            <td>Spain 2-2 Germany</td>
-                            <td><span class="points-badge correct">+5</span></td>
-                            <td>May 16, 2026</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div id="predictions-container" style="min-height: 400px;">
+                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
+                        <i class="fas fa-spinner fa-spin"></i> Loading predictions...
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Leaderboard Tab -->
         <div id="leaderboard" class="admin-tab-content">
-            <div class="admin-card">                <h2><i class="fas fa-trophy"></i> Leaderboard Management</h2>
-                <p class="admin-subtitle">Manage and recalculate leaderboards</p>
+            <div class="admin-card">
+                <h2><i class="fas fa-trophy"></i> Leaderboard Management</h2>
+                <p class="admin-subtitle">View leaderboard and statistics</p>
                 
-                <div class="leaderboard-actions">
-                    <button class="admin-button" onclick="recalculatePoints()">
-                        <i class="fas fa-sync"></i> Recalculate Points
-                    </button>
-                </div>
-                <div class="leaderboard-info">
+                <div id="leaderboard-stats" class="leaderboard-info">
                     <div class="info-card">
                         <h4>Total Users</h4>
-                        <p>47</p>
+                        <p id="stat-total-users">-</p>
                     </div>
                     <div class="info-card">
                         <h4>Total Predictions</h4>
-                        <p>234</p>
+                        <p id="stat-total-predictions">-</p>
                     </div>
                     <div class="info-card">
                         <h4>Completed Matches</h4>
-                        <p>2</p>
-                    </div>
-                    <div class="info-card">
-                        <h4>Last Updated</h4>
-                        <p>Just now</p>
+                        <p id="stat-completed-matches">-</p>
                     </div>
                 </div>
 
                 <h3>Top 10 Users</h3>
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Rank</th>
-                            <th>User</th>
-                            <th>Team</th>
-                            <th>Points</th>
-                            <th>Predictions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>1</td>
-                            <td>Fawaz Bakinson</td>
-                            <td>🇧🇷 Brazil</td>
-                            <td><span class="score-badge">847</span></td>
-                            <td>42</td>
-                        </tr>
-                        <tr>
-                            <td>2</td>
-                            <td>Katelyn Hyde</td>
-                            <td>🇫🇷 France</td>
-                            <td><span class="score-badge">823</span></td>
-                            <td>41</td>
-                        </tr>
-                        <tr>
-                            <td>3</td>
-                            <td>Manuel Mastrominico</td>
-                            <td>🇦🇷 Argentina</td>
-                            <td><span class="score-badge">791</span></td>
-                            <td>39</td>
-                        </tr>
-                        <tr>
-                            <td>4</td>
-                            <td>Bhavya Sharma</td>
-                            <td>🇩🇪 Germany</td>
-                            <td><span class="score-badge">742</span></td>
-                            <td>37</td>
-                        </tr>
-                        <tr>
-                            <td>5</td>
-                            <td>Sarah Connolly</td>
-                            <td>🇪🇸 Spain</td>
-                            <td><span class="score-badge">718</span></td>
-                            <td>36</td>
-                        </tr>
-                        <tr>
-                            <td>6</td>
-                            <td>David Buckley</td>
-                            <td>🇬🇧 England</td>
-                            <td><span class="score-badge">695</span></td>
-                            <td>35</td>
-                        </tr>
-                        <tr>
-                            <td>7</td>
-                            <td>Anita O'Driscoll</td>
-                            <td>🇳🇱 Netherlands</td>
-                            <td><span class="score-badge">672</span></td>
-                            <td>34</td>
-                        </tr>
-                        <tr>
-                            <td>8</td>
-                            <td>James Murphy</td>
-                            <td>🇵🇹 Portugal</td>
-                            <td><span class="score-badge">658</span></td>
-                            <td>33</td>
-                        </tr>
-                        <tr>
-                            <td>9</td>
-                            <td>Emma Walsh</td>
-                            <td>🇩🇪 Germany</td>
-                            <td><span class="score-badge">645</span></td>
-                            <td>32</td>
-                        </tr>
-                        <tr>
-                            <td>10</td>
-                            <td>Liam O'Brien</td>
-                            <td>🇦🇹 Austria</td>
-                            <td><span class="score-badge">632</span></td>
-                            <td>31</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div id="leaderboard-container" style="min-height: 400px;">
+                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
+                        <i class="fas fa-spinner fa-spin"></i> Loading leaderboard...
+                    </div>
+                </div>
             </div>
         </div>
     `;
@@ -435,58 +193,460 @@ function switchAdminTab(tabName) {
     
     // Add active class to clicked button
     event.target.closest('.admin-tab-btn').classList.add('active');
+    
+    // Load data for the tab
+    if (tabName === 'match-scores') {
+        loadMatches();
+    } else if (tabName === 'users') {
+        loadUsers();
+    } else if (tabName === 'predictions') {
+        loadPredictions();
+    } else if (tabName === 'leaderboard') {
+        loadLeaderboard();
+    }
 }
 
-// Submit match score
-function submitMatchScore() {
-    const matchSelect = document.getElementById('match-select').value;
-    const team1Score = document.getElementById('team1-score').value;
-    const team2Score = document.getElementById('team2-score').value;
+// ============================================================================
+// MATCH SCORES TAB
+// ============================================================================
+
+// Load all matches
+async function loadMatches() {
+    try {
+        console.log('[ADMIN] Loading matches...');
+        
+        const response = await fetchMatches();
+        
+        if (!response.matches || response.matches.length === 0) {
+            document.getElementById('match-select').innerHTML = '<option value="">No matches found</option>';
+            return;
+        }
+        
+        // Populate dropdown
+        let html = '<option value="">-- Select a match --</option>';
+        response.matches.forEach(match => {
+            const matchDate = new Date(match.match_date_utc).toLocaleString('en-IE', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            html += `<option value="${match.match_id}" data-home="${match.home_team}" data-away="${match.away_team}">${match.home_team} vs ${match.away_team} - ${matchDate}</option>`;
+        });
+        document.getElementById('match-select').innerHTML = html;
+        
+        // Load match results table
+        renderMatchResults(response.matches);
+        
+        console.log('[ADMIN] Matches loaded:', response.matches.length);
+    } catch (error) {
+        console.error('[ADMIN] Error loading matches:', error);
+        document.getElementById('match-select').innerHTML = '<option value="">Error loading matches</option>';
+    }
+}
+
+// Load match details when selected
+function loadMatchDetails() {
+    const select = document.getElementById('match-select');
+    const matchId = select.value;
     
-    if (!matchSelect || team1Score === '' || team2Score === '') {
-        alert('Please fill in all fields');
+    if (!matchId) {
+        document.getElementById('team1-score').value = '';
+        document.getElementById('team2-score').value = '';
         return;
     }
     
-    alert(`Score submitted: ${team1Score} - ${team2Score}`);
-    // Here you would send the data to your backend
+    // Clear scores
+    document.getElementById('team1-score').value = '';
+    document.getElementById('team2-score').value = '';
 }
 
-// Recalculate points (TEMPORARY TEST VERSION)
-function recalculatePoints() {
-    // Show loading state
-    const button = event.target;
-    const originalText = button.innerHTML;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Recalculating...';
-    button.disabled = true;
-
-    // Simulate backend processing with a 2-second delay
-    setTimeout(() => {
-        // Get all users from localStorage
-        const allUsers = JSON.parse(localStorage.getItem('allUsers') || '[]');
-        
-        // Simulate recalculating points (add random bonus points for testing)
-        allUsers.forEach(user => {
-            const bonusPoints = Math.floor(Math.random() * 50) + 10; // Random 10-60 points
-            user.points = (user.points || 0) + bonusPoints;
+// Render match results table
+function renderMatchResults(matches) {
+    const container = document.getElementById('match-results-container');
+    
+    let html = `
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Match</th>
+                    <th>Date</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    matches.forEach(match => {
+        const matchDate = new Date(match.match_date_utc).toLocaleString('en-IE', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
         });
+        
+        const scoreDisplay = match.home_score !== null && match.away_score !== null 
+            ? `<span class="score-badge">${match.home_score} - ${match.away_score}</span>`
+            : '-';
+        
+        const statusBadge = match.status === 'finished' 
+            ? '<span class="status-badge completed">Completed</span>'
+            : '<span class="status-badge pending">Pending</span>';
+        
+        html += `
+            <tr>
+                <td>${match.home_team} vs ${match.away_team}</td>
+                <td>${matchDate}</td>
+                <td>${scoreDisplay}</td>
+                <td>${statusBadge}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = html;
+}
 
-        // Save updated users back to localStorage
-        localStorage.setItem('allUsers', JSON.stringify(allUsers));
-
-        // Reset button
+// Submit match score
+async function submitMatchScore() {
+    const matchSelect = document.getElementById('match-select');
+    const matchId = matchSelect.value;
+    const homeScore = document.getElementById('team1-score').value;
+    const awayScore = document.getElementById('team2-score').value;
+    
+    if (!matchId) {
+        alert('Please select a match');
+        return;
+    }
+    
+    if (homeScore === '' || awayScore === '') {
+        alert('Please enter both scores');
+        return;
+    }
+    
+    try {
+        const button = event.target;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+        button.disabled = true;
+        
+        const userId = parseInt(localStorage.getItem('userId'));
+        const jwtToken = localStorage.getItem('jwt_token');
+        
+        const response = await submitAdminScore({
+            action: 'enter_score',
+            admin_user_id: userId,
+            jwt_token: jwtToken,
+            match_id: matchId,
+            home_score: parseInt(homeScore),
+            away_score: parseInt(awayScore)
+        });
+        
+        if (response.status === 'success') {
+            alert(`✅ Score submitted!\n${response.home_team} ${response.home_score} - ${response.away_score} ${response.away_team}\n${response.predictions_updated} predictions updated`);
+            
+            // Reload matches
+            loadMatches();
+            
+            // Clear form
+            document.getElementById('team1-score').value = '';
+            document.getElementById('team2-score').value = '';
+            document.getElementById('match-select').value = '';
+        } else {
+            alert(`❌ Error: ${response.message}`);
+        }
+        
         button.innerHTML = originalText;
         button.disabled = false;
-
-        // Show success message
-        alert('✅ Points recalculated successfully!\n\nAll users have been awarded bonus points.\n\nNote: This is a temporary test version. Replace with actual backend API when ready.');
-    }, 2000);
-}
-
-// Reset all points
-function resetAllPoints() {
-    if (confirm('⚠️ WARNING: This will reset ALL user points to 0. This cannot be undone. Are you sure?')) {
-        alert('All points have been reset to 0.');
-        // Here you would call your backend API to reset points
+    } catch (error) {
+        console.error('[ADMIN] Error submitting score:', error);
+        alert(`Error: ${error.message}`);
+        event.target.innerHTML = '<i class="fas fa-check"></i> Submit Score';
+        event.target.disabled = false;
     }
 }
+
+// ============================================================================
+// USERS TAB
+// ============================================================================
+
+let allUsers = [];
+
+// Load all users
+async function loadUsers() {
+    try {
+        console.log('[ADMIN] Loading users...');
+        
+        const response = await fetchAllUsers();
+        
+        if (!response.users || response.users.length === 0) {
+            document.getElementById('users-container').innerHTML = '<p style="text-align: center; color: rgba(255, 255, 255, 0.6);">No users found</p>';
+            return;
+        }
+        
+        allUsers = response.users;
+        renderUsers(allUsers);
+        
+        console.log('[ADMIN] Users loaded:', response.users.length);
+    } catch (error) {
+        console.error('[ADMIN] Error loading users:', error);
+        document.getElementById('users-container').innerHTML = `<p style="text-align: center; color: #EF4444;">Error loading users: ${error.message}</p>`;
+    }
+}
+
+// Render users table
+function renderUsers(users) {
+    const container = document.getElementById('users-container');
+    
+    let html = `
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Assigned Team</th>
+                    <th>Registration Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    users.forEach(user => {
+        const regDate = new Date(user.created_at).toLocaleString('en-IE', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+        
+        const adminBadge = user.is_admin ? ' <span class="admin-badge">ADMIN</span>' : '';
+        
+        html += `
+            <tr>
+                <td>${user.username}${adminBadge}</td>
+                <td>${user.email}</td>
+                <td>${user.sweepstake_country || '-'}</td>
+                <td>${regDate}</td>
+                <td><span class="status-badge active">Active</span></td>
+            </tr>
+        `;
+    });
+    
+    html += `
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// Filter users by search
+function filterUsers() {
+    const searchTerm = document.getElementById('user-search').value.toLowerCase();
+    
+    const filtered = allUsers.filter(user => 
+        user.username.toLowerCase().includes(searchTerm) ||
+        user.email.toLowerCase().includes(searchTerm)
+    );
+    
+    renderUsers(filtered);
+}
+
+// ============================================================================
+// PREDICTIONS TAB
+// ============================================================================
+
+let allPredictions = [];
+
+// Load all predictions
+async function loadPredictions() {
+    try {
+        console.log('[ADMIN] Loading predictions...');
+        
+        const response = await fetchAllPredictions();
+        
+        if (!response.predictions || response.predictions.length === 0) {
+            document.getElementById('predictions-container').innerHTML = '<p style="text-align: center; color: rgba(255, 255, 255, 0.6);">No predictions found</p>';
+            return;
+        }
+        
+        allPredictions = response.predictions;
+        renderPredictions(allPredictions);
+        
+        console.log('[ADMIN] Predictions loaded:', response.predictions.length);
+    } catch (error) {
+        console.error('[ADMIN] Error loading predictions:', error);
+        document.getElementById('predictions-container').innerHTML = `<p style="text-align: center; color: #EF4444;">Error loading predictions: ${error.message}</p>`;
+    }
+}
+
+// Render predictions table
+function renderPredictions(predictions) {
+    const container = document.getElementById('predictions-container');
+    
+    if (predictions.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: rgba(255, 255, 255, 0.6);">No predictions found</p>';
+        return;
+    }
+    
+    let html = `
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Type</th>
+                    <th>Prediction</th>
+                    <th>Result</th>
+                    <th>Points</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    predictions.forEach(pred => {
+        const predDate = new Date(pred.created_at).toLocaleString('en-IE', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        let typeDisplay = '';
+        let predictionDisplay = '';
+        let resultDisplay = '';
+        let pointsDisplay = pred.points_earned || '0';
+        
+        if (pred.prediction_type === 'match') {
+            typeDisplay = '<span class="badge-type match">Match Score</span>';
+            predictionDisplay = `${pred.home_team} ${pred.predicted_home_score}-${pred.predicted_away_score} ${pred.away_team}`;
+            resultDisplay = pred.home_score !== null ? `${pred.home_team} ${pred.home_score}-${pred.away_score} ${pred.away_team}` : '-';
+        } else if (pred.prediction_type === 'tournament') {
+            typeDisplay = '<span class="badge-type tournament">Tournament</span>';
+            predictionDisplay = pred.country_guess || '-';
+            resultDisplay = '-';
+        } else if (pred.prediction_type === 'boot') {
+            typeDisplay = '<span class="badge-type boot">Golden Boot</span>';
+            predictionDisplay = pred.golden_boot_guess || '-';
+            resultDisplay = '-';
+        } else if (pred.prediction_type === 'glove') {
+            typeDisplay = '<span class="badge-type glove">Golden Glove</span>';
+            predictionDisplay = pred.golden_glove_guess || '-';
+            resultDisplay = '-';
+        }
+        
+        const pointsClass = pointsDisplay > 0 ? 'points-badge correct' : 'points-badge';
+        
+        html += `
+            <tr>
+                <td>${pred.username}</td>
+                <td>${typeDisplay}</td>
+                <td>${predictionDisplay}</td>
+                <td>${resultDisplay}</td>
+                <td><span class="${pointsClass}">+${pointsDisplay}</span></td>
+                <td>${predDate}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// Filter predictions by type
+function filterPredictions() {
+    const filterType = document.getElementById('prediction-filter').value;
+    
+    if (!filterType) {
+        renderPredictions(allPredictions);
+    } else {
+        const filtered = allPredictions.filter(pred => pred.prediction_type === filterType);
+        renderPredictions(filtered);
+    }
+}
+
+// ============================================================================
+// LEADERBOARD TAB
+// ============================================================================
+
+// Load leaderboard
+async function loadLeaderboard() {
+    try {
+        console.log('[ADMIN] Loading leaderboard...');
+        
+        const response = await fetchAdminLeaderboard();
+        
+        // Update stats
+        document.getElementById('stat-total-users').textContent = response.stats.total_users;
+        document.getElementById('stat-total-predictions').textContent = response.stats.total_predictions;
+        document.getElementById('stat-completed-matches').textContent = response.stats.completed_matches;
+        
+        // Render leaderboard
+        renderLeaderboard(response.leaderboard);
+        
+        console.log('[ADMIN] Leaderboard loaded');
+    } catch (error) {
+        console.error('[ADMIN] Error loading leaderboard:', error);
+        document.getElementById('leaderboard-container').innerHTML = `<p style="text-align: center; color: #EF4444;">Error loading leaderboard: ${error.message}</p>`;
+    }
+}
+
+// Render leaderboard table
+function renderLeaderboard(leaderboard) {
+    const container = document.getElementById('leaderboard-container');
+    
+    let html = `
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>User</th>
+                    <th>Team</th>
+                    <th>Points</th>
+                    <th>Predictions</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    leaderboard.forEach(user => {
+        html += `
+            <tr>
+                <td>${user.rank}</td>
+                <td>${user.username}</td>
+                <td>${user.sweepstake_country || '-'}</td>
+                <td><span class="score-badge">${user.total_points}</span></td>
+                <td>${user.prediction_count}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// Auto-load data when admin page is shown
+document.addEventListener('DOMContentLoaded', function() {
+    const observer = new MutationObserver(function(mutations) {
+        const adminPage = document.getElementById('adminPage');
+        if (adminPage && adminPage.classList.contains('active')) {
+            // Load matches by default
+            setTimeout(loadMatches, 100);
+        }
+    });
+    
+    observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+});
