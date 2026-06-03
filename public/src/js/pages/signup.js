@@ -1,4 +1,4 @@
-// Sign-Up Page - FIXED with JWT Token
+// Sign-Up Page - FIXED with is_admin storage
 
 function createSignupPage() {
     return `
@@ -140,6 +140,10 @@ async function handleSignup(button) {
         } else {
             console.warn('No JWT token in registration response');
         }
+
+        // ✅ FIX #3: Store the is_admin flag from registration response
+        localStorage.setItem('isAdmin', response.is_admin ? 'true' : 'false');
+        console.log('[SIGNUP] Stored isAdmin flag:', response.is_admin ? 'true' : 'false');
 
         // Reset button
         button.innerHTML = originalText;
