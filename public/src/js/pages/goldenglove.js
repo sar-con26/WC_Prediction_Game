@@ -1,12 +1,13 @@
-// Golden Glove Prediction Page - CORRECTED
+// Golden Glove Prediction Page - UPDATED with improved UI
 
 function createGoldenGlovePage() {
     return `
+        <button class="back-button" onclick="goBackToPreviousPage()">
+            <i class="fas fa-arrow-left"></i> Back
+        </button>
+
         <div class="prediction-page fadeInUp">
             <div class="prediction-header">
-                <button class="back-button" onclick="goBackToPreviousPage()">
-                    <i class="fas fa-arrow-left"></i> Back
-                </button>
                 <h1>Golden Glove</h1>
                 <div class="progress-indicator">
                     <div class="progress-step completed">
@@ -21,27 +22,27 @@ function createGoldenGlovePage() {
                 </div>
             </div>
 
-            <div class="prediction-content">
+            <div class="prediction-card">
+                <div class="prediction-icon">🧤</div>
+                <h2>Who will win the Golden Glove?</h2>
+                <p class="prediction-subtitle">Select the goalkeeper you think will have the best performance</p>
+                
                 <div class="prediction-form">
-                    <label for="golden-glove">
-                        <i class="fas fa-hand-paper"></i> Who will win the Golden Glove? (Best Goalkeeper)
-                    </label>
                     <input 
                         type="text" 
                         id="golden-glove" 
-                        class="form-input" 
+                        class="form-input-large" 
                         placeholder="e.g., Gianluigi Donnarumma"
                         maxlength="100"
                     >
                     <div class="character-counter">
-                        <span id="glove-count">0</span>/100
+                        <span id="glove-count">0</span>/100 characters
                     </div>
-                    <small class="form-hint">Enter the goalkeeper name you think will have the best performance</small>
                 </div>
 
                 <div class="prediction-actions">
-                    <button class="btn btn-primary" onclick="submitGoldenGlove(this)">
-                        <i class="fas fa-check-circle"></i> Complete
+                    <button class="btn btn-primary btn-large" onclick="submitGoldenGlove(this)">
+                        <i class="fas fa-check-circle"></i> Complete All Predictions
                     </button>
                 </div>
             </div>
@@ -141,7 +142,7 @@ async function submitGoldenGlove(button) {
 
     } catch (error) {
         // Reset button
-        button.innerHTML = '<i class="fas fa-check-circle"></i> Complete';
+        button.innerHTML = '<i class="fas fa-check-circle"></i> Complete All Predictions';
         button.disabled = false;
 
         console.error('Golden glove prediction error:', error);

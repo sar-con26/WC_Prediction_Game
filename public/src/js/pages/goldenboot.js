@@ -1,12 +1,13 @@
-// Golden Boot Prediction Page - CORRECTED
+// Golden Boot Prediction Page - UPDATED with improved UI
 
 function createGoldenBootPage() {
     return `
+        <button class="back-button" onclick="goBackToPreviousPage()">
+            <i class="fas fa-arrow-left"></i> Back
+        </button>
+
         <div class="prediction-page fadeInUp">
             <div class="prediction-header">
-                <button class="back-button" onclick="goBackToPreviousPage()">
-                    <i class="fas fa-arrow-left"></i> Back
-                </button>
                 <h1>Golden Boot</h1>
                 <div class="progress-indicator">
                     <div class="progress-step completed">
@@ -19,26 +20,26 @@ function createGoldenBootPage() {
                 </div>
             </div>
 
-            <div class="prediction-content">
+            <div class="prediction-card">
+                <div class="prediction-icon">👟</div>
+                <h2>Who will win the Golden Boot?</h2>
+                <p class="prediction-subtitle">Select the player you think will score the most goals</p>
+                
                 <div class="prediction-form">
-                    <label for="golden-boot">
-                        <i class="fas fa-shoe-prints"></i> Who will win the Golden Boot? (Top Scorer)
-                    </label>
                     <input 
                         type="text" 
                         id="golden-boot" 
-                        class="form-input" 
+                        class="form-input-large" 
                         placeholder="e.g., Kylian Mbappé"
                         maxlength="100"
                     >
                     <div class="character-counter">
-                        <span id="boot-count">0</span>/100
+                        <span id="boot-count">0</span>/100 characters
                     </div>
-                    <small class="form-hint">Enter the player name you think will score the most goals</small>
                 </div>
 
                 <div class="prediction-actions">
-                    <button class="btn btn-primary" onclick="submitGoldenBoot(this)">
+                    <button class="btn btn-primary btn-large" onclick="submitGoldenBoot(this)">
                         <i class="fas fa-arrow-right"></i> Continue to Next Step
                     </button>
                 </div>

@@ -1,4 +1,4 @@
-// Main App Logic - UPDATED
+// Main App Logic - UPDATED (Verification page removed)
 
 // Initialize app
 function initApp() {
@@ -18,12 +18,7 @@ function initApp() {
     signupPage.innerHTML = createSignupPage();
     app.appendChild(signupPage);
     
-    // Create verification page
-    const verificationPage = document.createElement('div');
-    verificationPage.className = 'page';
-    verificationPage.id = 'verificationPage';
-    verificationPage.innerHTML = createVerificationPage();
-    app.appendChild(verificationPage);
+    // ✅ REMOVED: Verification page - no longer needed
     
     // Create allocation page
     const allocationPage = document.createElement('div');

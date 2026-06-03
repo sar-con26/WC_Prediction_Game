@@ -1,4 +1,4 @@
-// Tournament Winner Prediction Page - CORRECTED
+// Tournament Winner Prediction Page - UPDATED with improved UI
 
 function createTournamentWinnerPage() {
     const teams = [
@@ -70,11 +70,12 @@ function createTournamentWinnerPage() {
     ).join('');
 
     return `
+        <button class="back-button" onclick="goBackToPreviousPage()">
+            <i class="fas fa-arrow-left"></i> Back
+        </button>
+
         <div class="prediction-page fadeInUp">
             <div class="prediction-header">
-                <button class="back-button" onclick="goBackToPreviousPage()">
-                    <i class="fas fa-arrow-left"></i> Back
-                </button>
                 <h1>Tournament Winner</h1>
                 <div class="progress-indicator">
                     <div class="progress-step active">1</div>
@@ -85,20 +86,20 @@ function createTournamentWinnerPage() {
                 </div>
             </div>
 
-            <div class="prediction-content">
+            <div class="prediction-card">
+                <div class="prediction-icon">🏆</div>
+                <h2>Who will win the 2026 World Cup?</h2>
+                <p class="prediction-subtitle">Select the team you think will lift the trophy</p>
+                
                 <div class="prediction-form">
-                    <label for="tournament-winner">
-                        <i class="fas fa-trophy"></i> Who will win the 2026 World Cup?
-                    </label>
-                    <select id="tournament-winner" class="form-input form-select">
+                    <select id="tournament-winner" class="form-select-large">
                         <option value="">-- Select a team --</option>
                         ${teamOptions}
                     </select>
-                    <small class="form-hint">Select the team you think will win the tournament</small>
                 </div>
 
                 <div class="prediction-actions">
-                    <button class="btn btn-primary" onclick="submitTournamentWinner(this)">
+                    <button class="btn btn-primary btn-large" onclick="submitTournamentWinner(this)">
                         <i class="fas fa-arrow-right"></i> Continue
                     </button>
                 </div>

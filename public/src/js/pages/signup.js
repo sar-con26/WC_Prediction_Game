@@ -1,4 +1,4 @@
-// Sign-Up Page - FIXED with is_admin storage
+// Sign-Up Page - UPDATED with email domain validation and no verification
 
 function createSignupPage() {
     return `
@@ -13,6 +13,7 @@ function createSignupPage() {
                 <div class="form-group">
                     <label for="signup-email">Email Address</label>
                     <input type="email" id="signup-email" class="form-input" placeholder="your.email@deloitte.ie">
+                    <small class="form-hint">Must be a valid Deloitte email (@deloitte.ie)</small>
                 </div>
                 
                 <div class="form-group">
@@ -67,6 +68,12 @@ async function handleSignup(button) {
 
     if (!email.includes('@')) {
         alert('Please enter a valid email');
+        return;
+    }
+
+    // ✅ NEW: Validate email domain must be @deloitte.ie
+    if (!email.endsWith('@deloitte.ie')) {
+        alert('Please use your Deloitte email address (@deloitte.ie)');
         return;
     }
 
@@ -133,7 +140,7 @@ async function handleSignup(button) {
         localStorage.setItem('userEmail', response.email);
         localStorage.setItem('userOfficeLocation', response.office_location);
         
-        // IMPORTANT: Store the JWT token from registration response
+        // Store JWT token from registration response
         if (response.jwt_token) {
             localStorage.setItem('jwt_token', response.jwt_token);
             console.log('JWT token stored from registration');
@@ -141,7 +148,7 @@ async function handleSignup(button) {
             console.warn('No JWT token in registration response');
         }
 
-        // ✅ FIX #3: Store the is_admin flag from registration response
+        // ✅ Store the is_admin flag from registration response
         localStorage.setItem('isAdmin', response.is_admin ? 'true' : 'false');
         console.log('[SIGNUP] Stored isAdmin flag:', response.is_admin ? 'true' : 'false');
 
@@ -152,8 +159,8 @@ async function handleSignup(button) {
         // Show success message
         alert(`✅ Account created successfully!\nWelcome, ${response.username}!`);
 
-        // Navigate to verification page
-        showPage('verificationPage');
+        // ✅ CHANGED: Navigate directly to allocation page (skip verification)
+        showPage('allocationPage');
 
     } catch (error) {
         // Reset button
@@ -162,6 +169,18 @@ async function handleSignup(button) {
 
         // Show error message
         console.error('Signup error:', error);
-        alert(`❌ Registration failed: ${error.message}`);
+        
+        // ✅ NEW: Handle specific error messages from backend
+        let errorMessage = error.message;
+        
+        if (error.message.includes('Email is already in use')) {
+            errorMessage = '❌ Email is already in use. Please use a different email.';
+        } else if (error.message.includes('Username is already in use')) {
+            errorMessage = '❌ Username is already in use. Please choose a different username.';
+        } else if (error.message.includes('Deloitte')) {
+            errorMessage = '❌ Please use your Deloitte email address (@deloitte.ie)';
+        }
+        
+        alert(`Registration failed: ${errorMessage}`);
     }
 }
