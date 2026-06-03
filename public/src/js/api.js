@@ -1,6 +1,6 @@
-// api.js - UPDATED VERSION WITH USER PREDICTIONS FETCH
+// api.js - FINAL VERSION WITH PREDICTION HISTORY
 // API Service for communicating with Flask backend
-// Includes functions for match fetching, prediction submission, and user prediction retrieval
+// Includes functions for match fetching, prediction submission, user prediction retrieval, and prediction history
 
 const API_BASE_URL = (() => {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -162,7 +162,6 @@ async function fetchMatches(status = null) {
 
 /**
  * Fetch user's existing predictions for all matches
- * FIXED: New function to load user predictions on page load
  * @param {number} userId - User ID
  * @returns {Promise} User predictions data
  */
@@ -187,6 +186,36 @@ async function fetchUserPredictions(userId) {
         return data;
     } catch (error) {
         console.error('[API] Fetch user predictions error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Fetch user's finished predictions (prediction history)
+ * @param {number} userId - User ID
+ * @returns {Promise} User finished predictions data
+ */
+async function fetchPredictionHistory(userId) {
+    try {
+        console.log('[API] Fetching prediction history for user:', userId);
+        
+        const response = await fetch(`${API_BASE_URL}/prediction-history/${userId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch prediction history');
+        }
+
+        console.log('[API] Prediction history fetched successfully:', data);
+        return data;
+    } catch (error) {
+        console.error('[API] Fetch prediction history error:', error);
         throw error;
     }
 }

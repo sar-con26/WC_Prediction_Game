@@ -1,6 +1,7 @@
-// Homepage with Dynamic Leaderboards - FIXED VERSION
+// Homepage with Dynamic Leaderboards - FINAL VERSION
 // - Team leaderboard now shows W/D/L instead of points
 // - Position now shows correctly (no more N/A)
+// - Includes prediction history modal functionality
 
 // Store leaderboard data globally
 let userLeaderboardData = [];
@@ -325,10 +326,137 @@ function generateUserPositionHTML(leaderboard, userId, userName) {
     `;
 }
 
-// Open prediction history
-function openHistory() {
-    alert('📊 Prediction History\n\nYour predictions will be displayed here once you make some!');
+/**
+ * Open prediction history modal
+ */
+async function openHistory() {
+    try {
+        const userId = parseInt(localStorage.getItem('userId'));
+        
+        if (!userId) {
+            alert('User not authenticated');
+            return;
+        }
+        
+        // Show modal
+        const modal = document.getElementById('historyModal');
+        if (!modal) {
+            alert('History modal not found');
+            return;
+        }
+        
+        modal.style.display = 'flex';
+        
+        // Show loading state
+        const historyItems = document.getElementById('historyItems');
+        historyItems.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.7);">
+                <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 15px;"></i>
+                <p>Loading your prediction history...</p>
+            </div>
+        `;
+        
+        // Fetch prediction history
+        const predictions = await fetchPredictionHistory(userId);
+        
+        // Check if predictions is an array or has a predictions property
+        const predictionsList = Array.isArray(predictions) ? predictions : (predictions.predictions || []);
+        
+        if (predictionsList.length === 0) {
+            historyItems.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.6);">
+                    <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 15px; opacity: 0.5;"></i>
+                    <p>No finished matches yet</p>
+                    <p style="font-size: 0.9rem; margin-top: 10px;">Your prediction history will appear here once matches are completed.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Render predictions
+        let html = '<div class="history-list">';
+        
+        predictionsList.forEach(pred => {
+            const matchDate = new Date(pred.match_date_utc);
+            const formattedDate = matchDate.toLocaleString('en-IE', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'Europe/Dublin'
+            });
+            
+            const pointsClass = pred.points_earned > 0 ? 'points-positive' : 'points-zero';
+            
+            html += `
+                <div class="history-item">
+                    <div class="history-match">
+                        <div class="history-teams">
+                            <span class="team-name">${pred.home_team}</span>
+                            <span class="vs">vs</span>
+                            <span class="team-name">${pred.away_team}</span>
+                        </div>
+                        <div class="history-date">${formattedDate}</div>
+                    </div>
+                    
+                    <div class="history-scores">
+                        <div class="score-section">
+                            <div class="score-label">Your Prediction</div>
+                            <div class="score-value">${pred.predicted_home_score} - ${pred.predicted_away_score}</div>
+                        </div>
+                        
+                        <div class="score-section">
+                            <div class="score-label">Actual Result</div>
+                            <div class="score-value">${pred.home_score !== null ? pred.home_score : '-'} - ${pred.away_score !== null ? pred.away_score : '-'}</div>
+                        </div>
+                        
+                        <div class="score-section">
+                            <div class="score-label">Points</div>
+                            <div class="score-value ${pointsClass}">${pred.points_earned || 0}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        historyItems.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error opening history:', error);
+        const historyItems = document.getElementById('historyItems');
+        historyItems.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #EF4444;">
+                <i class="fas fa-exclamation-circle" style="font-size: 2rem; margin-bottom: 15px;"></i>
+                <p>Error loading prediction history</p>
+                <p style="font-size: 0.9rem; margin-top: 10px;">${error.message}</p>
+            </div>
+        `;
+    }
 }
+
+/**
+ * Close history modal
+ */
+function closeHistory() {
+    const modal = document.getElementById('historyModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Close modal when clicking outside
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('historyModal');
+    if (modal) {
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                closeHistory();
+            }
+        });
+    }
+});
 
 // Auto-load leaderboards when home page is shown
 document.addEventListener('DOMContentLoaded', function() {
