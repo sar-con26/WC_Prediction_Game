@@ -7,6 +7,7 @@
 // - Lock mechanism (2 hours before match)
 // - Show actual scores when finished
 // - Edit/resubmit before deadline
+// - COMPLETE HISTORY MODAL IMPLEMENTATION
 
 // Global state
 let matchesData = [];
@@ -555,10 +556,194 @@ async function submitMatchPrediction(matchId) {
 }
 
 /**
- * Open prediction history
+ * Open prediction history modal
+ * COMPLETE IMPLEMENTATION - Shows all finished predictions
  */
-function openHistory() {
-    alert('📊 Prediction History\n\nYour predictions will be displayed here once you make some!');
+async function openHistory() {
+    try {
+        console.log('[PREDICTIONS] Opening history modal...');
+        
+        // Get user ID and JWT token
+        const userId = parseInt(localStorage.getItem('userId'));
+        const jwtToken = getJWTToken();
+        
+        if (!userId) {
+            alert('User not authenticated');
+            return;
+        }
+        
+        if (!jwtToken) {
+            alert('Session expired. Please log in again.');
+            return;
+        }
+        
+        // Show loading state
+        const historyModal = document.createElement('div');
+        historyModal.id = 'historyModal';
+        historyModal.className = 'modal';
+        historyModal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fas fa-history"></i> My Prediction History</h2>
+                    <button class="modal-close" onclick="closeHistory()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div style="text-align: center; padding: 40px;">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: #86BC25;"></i>
+                        <p style="margin-top: 15px; color: rgba(255, 255, 255, 0.7);">Loading your history...</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(historyModal);
+        
+        // Fetch prediction history from API
+        console.log('[PREDICTIONS] Fetching history for user:', userId);
+        
+        const response = await fetch(`${API_BASE_URL}/prediction-history/${userId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${jwtToken}`
+            }
+        });
+        
+        console.log('[PREDICTIONS] History response status:', response.status);
+        
+        const data = await response.json();
+        console.log('[PREDICTIONS] History data:', data);
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch prediction history');
+        }
+        
+        // Parse the response
+        const predictions = data.predictions || [];
+        
+        console.log('[PREDICTIONS] Loaded', predictions.length, 'finished predictions');
+        
+        // Build history HTML
+        let historyHTML = `
+            <div class="modal-header">
+                <h2><i class="fas fa-history"></i> My Prediction History</h2>
+                <button class="modal-close" onclick="closeHistory()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+        `;
+        
+        if (predictions.length === 0) {
+            historyHTML += `
+                <div style="text-align: center; padding: 40px;">
+                    <i class="fas fa-inbox" style="font-size: 3rem; color: rgba(255, 255, 255, 0.3); margin-bottom: 20px;"></i>
+                    <p style="color: rgba(255, 255, 255, 0.6);">No finished matches yet</p>
+                </div>
+            `;
+        } else {
+            historyHTML += '<div class="history-list">';
+            
+            predictions.forEach(pred => {
+                const matchDate = new Date(pred.match_date_utc);
+                const formattedDate = matchDate.toLocaleString('en-IE', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'Europe/Dublin'
+                });
+                
+                const isCorrect = pred.predicted_home_score === pred.home_score && 
+                                 pred.predicted_away_score === pred.away_score;
+                const pointsClass = pred.points_earned > 0 ? 'points-positive' : 'points-zero';
+                
+                historyHTML += `
+                    <div class="history-item ${isCorrect ? 'correct-prediction' : ''}">
+                        <div class="history-match">
+                            <div class="history-teams">
+                                <span class="team-name">${pred.home_team}</span>
+                                <span class="vs">vs</span>
+                                <span class="team-name">${pred.away_team}</span>
+                            </div>
+                            <div class="history-date">${formattedDate}</div>
+                        </div>
+                        <div class="history-scores">
+                            <div class="score-column">
+                                <div class="score-label">Your Prediction</div>
+                                <div class="score-value">${pred.predicted_home_score} - ${pred.predicted_away_score}</div>
+                            </div>
+                            <div class="score-column">
+                                <div class="score-label">Actual Score</div>
+                                <div class="score-value">${pred.home_score} - ${pred.away_score}</div>
+                            </div>
+                            <div class="score-column">
+                                <div class="score-label">Points</div>
+                                <div class="score-value ${pointsClass}">${pred.points_earned}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            historyHTML += '</div>';
+        }
+        
+        historyHTML += '</div>';
+        
+        // Update modal content
+        const modalContent = document.querySelector('#historyModal .modal-content');
+        modalContent.innerHTML = historyHTML;
+        
+        // Add close button functionality
+        document.querySelector('#historyModal .modal-close').onclick = closeHistory;
+        
+        // Close modal when clicking outside
+        historyModal.onclick = function(event) {
+            if (event.target === historyModal) {
+                closeHistory();
+            }
+        };
+        
+    } catch (error) {
+        console.error('[PREDICTIONS] Error opening history:', error);
+        
+        const historyModal = document.getElementById('historyModal');
+        if (historyModal) {
+            const modalContent = historyModal.querySelector('.modal-content');
+            modalContent.innerHTML = `
+                <div class="modal-header">
+                    <h2><i class="fas fa-history"></i> My Prediction History</h2>
+                    <button class="modal-close" onclick="closeHistory()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div style="text-align: center; padding: 40px;">
+                        <i class="fas fa-exclamation-circle" style="font-size: 2rem; color: #EF4444; margin-bottom: 15px;"></i>
+                        <p style="color: #EF4444;">Error loading history</p>
+                        <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; margin-top: 10px;">${error.message}</p>
+                        <button class="btn btn-primary" onclick="openHistory()" style="margin-top: 20px;">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+    }
+}
+
+/**
+ * Close prediction history modal
+ */
+function closeHistory() {
+    const historyModal = document.getElementById('historyModal');
+    if (historyModal) {
+        historyModal.remove();
+    }
 }
 
 /**
