@@ -1,4 +1,5 @@
-// Admin Dashboard - COMPLETE VERSION WITH DATABASE INTEGRATION
+// Admin Dashboard - WORKING FIX
+// Uses proper click handlers instead of onchange
 
 // Check if user is admin
 function isUserAdmin() {
@@ -46,16 +47,16 @@ function createAdminPage() {
 
         <!-- Admin Tabs -->
         <div class="admin-tabs">
-            <button class="admin-tab-btn active" onclick="switchAdminTab('match-scores')">
+            <button class="admin-tab-btn active" onclick="switchAdminTab(event, 'match-scores')">
                 <i class="fas fa-futbol"></i> Match Scores
             </button>
-            <button class="admin-tab-btn" onclick="switchAdminTab('users')">
+            <button class="admin-tab-btn" onclick="switchAdminTab(event, 'users')">
                 <i class="fas fa-users"></i> Users
             </button>
-            <button class="admin-tab-btn" onclick="switchAdminTab('predictions')">
+            <button class="admin-tab-btn" onclick="switchAdminTab(event, 'predictions')">
                 <i class="fas fa-chart-bar"></i> Predictions
             </button>
-            <button class="admin-tab-btn" onclick="switchAdminTab('leaderboard')">
+            <button class="admin-tab-btn" onclick="switchAdminTab(event, 'leaderboard')">
                 <i class="fas fa-trophy"></i> Leaderboard
             </button>
         </div>
@@ -70,9 +71,12 @@ function createAdminPage() {
                     <div class="form-row">
                         <div class="form-group">
                             <label for="match-select">Select Match</label>
-                            <select id="match-select" class="form-input" onchange="loadMatchDetails()">
-                                <option value="">-- Loading matches... --</option>
+                            <select id="match-select" class="form-input">
+                                <option value="">-- Click to load matches --</option>
                             </select>
+                            <button class="admin-button" onclick="loadAdminMatches()" style="margin-top: 10px; width: 100%;">
+                                <i class="fas fa-download"></i> Load Matches
+                            </button>
                         </div>
                     </div>
 
@@ -95,7 +99,7 @@ function createAdminPage() {
                 <h3>Match Results</h3>
                 <div id="match-results-container" style="min-height: 300px;">
                     <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
-                        <i class="fas fa-spinner fa-spin"></i> Loading matches...
+                        <p>Click "Load Matches" button above to load matches</p>
                     </div>
                 </div>
             </div>
@@ -113,7 +117,7 @@ function createAdminPage() {
 
                 <div id="users-container" style="min-height: 400px;">
                     <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
-                        <i class="fas fa-spinner fa-spin"></i> Loading users...
+                        <p>Users will load when you click this tab</p>
                     </div>
                 </div>
             </div>
@@ -137,7 +141,7 @@ function createAdminPage() {
 
                 <div id="predictions-container" style="min-height: 400px;">
                     <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
-                        <i class="fas fa-spinner fa-spin"></i> Loading predictions...
+                        <p>Predictions will load when you click this tab</p>
                     </div>
                 </div>
             </div>
@@ -167,7 +171,7 @@ function createAdminPage() {
                 <h3>Top 10 Users</h3>
                 <div id="leaderboard-container" style="min-height: 400px;">
                     <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
-                        <i class="fas fa-spinner fa-spin"></i> Loading leaderboard...
+                        <p>Leaderboard will load when you click this tab</p>
                     </div>
                 </div>
             </div>
@@ -176,7 +180,14 @@ function createAdminPage() {
 }
 
 // Switch between admin tabs
-function switchAdminTab(tabName) {
+function switchAdminTab(event, tabName) {
+    console.log('[ADMIN] Switching to tab:', tabName);
+    
+    // Prevent default
+    if (event) {
+        event.preventDefault();
+    }
+    
     // Hide all tabs
     const tabs = document.querySelectorAll('.admin-tab-content');
     tabs.forEach(tab => tab.classList.remove('active'));
@@ -192,11 +203,15 @@ function switchAdminTab(tabName) {
     }
     
     // Add active class to clicked button
-    event.target.closest('.admin-tab-btn').classList.add('active');
+    if (event && event.target) {
+        event.target.closest('.admin-tab-btn').classList.add('active');
+    }
     
-    // Load data for the tab
+    // Load data for the tab ONLY when clicked
+    console.log('[ADMIN] Loading data for tab:', tabName);
     if (tabName === 'match-scores') {
-        loadMatches();
+        // Don't auto-load, user clicks button
+        console.log('[ADMIN] Match Scores tab activated - waiting for user to click Load button');
     } else if (tabName === 'users') {
         loadUsers();
     } else if (tabName === 'predictions') {
@@ -207,20 +222,31 @@ function switchAdminTab(tabName) {
 }
 
 // ============================================================================
-// MATCH SCORES TAB
+// MATCH SCORES TAB - WORKING VERSION
 // ============================================================================
 
-// Load all matches
-async function loadMatches() {
+// Load matches - CALLED BY BUTTON CLICK
+async function loadAdminMatches() {
     try {
-        console.log('[ADMIN] Loading matches...');
+        console.log('[ADMIN] ===== LOADING MATCHES =====');
         
+        // Show loading state
+        const container = document.getElementById('match-results-container');
+        container.innerHTML = '<div style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading matches...</div>';
+        
+        // Use the existing fetchMatches from api.js
         const response = await fetchMatches();
         
+        console.log('[ADMIN] Matches response:', response);
+        
         if (!response.matches || response.matches.length === 0) {
+            console.log('[ADMIN] No matches found');
             document.getElementById('match-select').innerHTML = '<option value="">No matches found</option>';
+            container.innerHTML = '<div style="text-align: center; padding: 20px; color: #EF4444;">No matches found in database</div>';
             return;
         }
+        
+        console.log('[ADMIN] Found', response.matches.length, 'matches');
         
         // Populate dropdown
         let html = '<option value="">-- Select a match --</option>';
@@ -234,14 +260,17 @@ async function loadMatches() {
             html += `<option value="${match.match_id}" data-home="${match.home_team}" data-away="${match.away_team}">${match.home_team} vs ${match.away_team} - ${matchDate}</option>`;
         });
         document.getElementById('match-select').innerHTML = html;
+        console.log('[ADMIN] Dropdown populated with', response.matches.length, 'matches');
         
         // Load match results table
         renderMatchResults(response.matches);
         
-        console.log('[ADMIN] Matches loaded:', response.matches.length);
+        console.log('[ADMIN] ===== MATCHES LOADED SUCCESSFULLY =====');
+        
     } catch (error) {
-        console.error('[ADMIN] Error loading matches:', error);
+        console.error('[ADMIN] ERROR LOADING MATCHES:', error);
         document.getElementById('match-select').innerHTML = '<option value="">Error loading matches</option>';
+        document.getElementById('match-results-container').innerHTML = `<p style="color: #EF4444; text-align: center;">Error: ${error.message}</p>`;
     }
 }
 
@@ -347,11 +376,13 @@ async function submitMatchScore() {
             away_score: parseInt(awayScore)
         });
         
+        console.log('[ADMIN] Score submission response:', response);
+        
         if (response.status === 'success') {
             alert(`✅ Score submitted!\n${response.home_team} ${response.home_score} - ${response.away_score} ${response.away_team}\n${response.predictions_updated} predictions updated`);
             
             // Reload matches
-            loadMatches();
+            loadAdminMatches();
             
             // Clear form
             document.getElementById('team1-score').value = '';
@@ -377,7 +408,6 @@ async function submitMatchScore() {
 
 let allUsers = [];
 
-// Load all users
 async function loadUsers() {
     try {
         console.log('[ADMIN] Loading users...');
@@ -399,7 +429,6 @@ async function loadUsers() {
     }
 }
 
-// Render users table
 function renderUsers(users) {
     const container = document.getElementById('users-container');
     
@@ -445,7 +474,6 @@ function renderUsers(users) {
     container.innerHTML = html;
 }
 
-// Filter users by search
 function filterUsers() {
     const searchTerm = document.getElementById('user-search').value.toLowerCase();
     
@@ -463,7 +491,6 @@ function filterUsers() {
 
 let allPredictions = [];
 
-// Load all predictions
 async function loadPredictions() {
     try {
         console.log('[ADMIN] Loading predictions...');
@@ -485,7 +512,6 @@ async function loadPredictions() {
     }
 }
 
-// Render predictions table
 function renderPredictions(predictions) {
     const container = document.getElementById('predictions-container');
     
@@ -562,7 +588,6 @@ function renderPredictions(predictions) {
     container.innerHTML = html;
 }
 
-// Filter predictions by type
 function filterPredictions() {
     const filterType = document.getElementById('prediction-filter').value;
     
@@ -578,19 +603,16 @@ function filterPredictions() {
 // LEADERBOARD TAB
 // ============================================================================
 
-// Load leaderboard
 async function loadLeaderboard() {
     try {
         console.log('[ADMIN] Loading leaderboard...');
         
         const response = await fetchAdminLeaderboard();
         
-        // Update stats
         document.getElementById('stat-total-users').textContent = response.stats.total_users;
         document.getElementById('stat-total-predictions').textContent = response.stats.total_predictions;
         document.getElementById('stat-completed-matches').textContent = response.stats.completed_matches;
         
-        // Render leaderboard
         renderLeaderboard(response.leaderboard);
         
         console.log('[ADMIN] Leaderboard loaded');
@@ -600,7 +622,6 @@ async function loadLeaderboard() {
     }
 }
 
-// Render leaderboard table
 function renderLeaderboard(leaderboard) {
     const container = document.getElementById('leaderboard-container');
     
@@ -637,16 +658,3 @@ function renderLeaderboard(leaderboard) {
     
     container.innerHTML = html;
 }
-
-// Auto-load data when admin page is shown
-document.addEventListener('DOMContentLoaded', function() {
-    const observer = new MutationObserver(function(mutations) {
-        const adminPage = document.getElementById('adminPage');
-        if (adminPage && adminPage.classList.contains('active')) {
-            // Load matches by default
-            setTimeout(loadMatches, 100);
-        }
-    });
-    
-    observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
-});

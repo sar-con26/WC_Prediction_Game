@@ -43,6 +43,7 @@ LAMBDA_ADMIN_SCORE_ENTRY_URL = os.getenv('LAMBDA_ADMIN_SCORE_ENTRY_URL')
 LAMBDA_ADMIN_USERS_URL = os.getenv('LAMBDA_ADMIN_USERS_URL')
 LAMBDA_ADMIN_PREDICTIONS_URL = os.getenv('LAMBDA_ADMIN_PREDICTIONS_URL')
 LAMBDA_ADMIN_LEADERBOARD_URL = os.getenv('LAMBDA_ADMIN_LEADERBOARD_URL')
+LAMBDA_ADMIN_GET_MATCHES_URL = os.getenv('LAMBDA_ADMIN_GET_MATCHES_URL')
 
 # Log startup
 logger.info("=" * 60)
@@ -586,7 +587,32 @@ def leaderboard():
 
 @app.route('/api/admin/enter-score', methods=['POST'])
 def admin_enter_score():
-    """Forward admin score entry to Lambda"""
+    """
+    Forward admin score entry to Lambda
+    
+    Request body:
+    {
+        "action": "enter_score",
+        "admin_user_id": 1,
+        "jwt_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        "match_id": "match_001",
+        "home_score": 2,
+        "away_score": 1
+    }
+    
+    Response:
+    {
+        "status": "success",
+        "message": "Score entered and points calculated",
+        "match_id": "match_001",
+        "home_team": "France",
+        "away_team": "Argentina",
+        "home_score": 2,
+        "away_score": 1,
+        "predictions_updated": 45,
+        "admin_action_id": 123
+    }
+    """
     try:
         logger.info("[ADMIN_SCORE] Score entry request received")
         
@@ -594,11 +620,17 @@ def admin_enter_score():
         
         if not data:
             logger.error("[ADMIN_SCORE] Missing request body")
-            return jsonify({'status': 'error', 'message': 'Missing request body'}), 400
+            return jsonify({
+                'status': 'error',
+                'message': 'Missing request body'
+            }), 400
         
         if not LAMBDA_ADMIN_SCORE_ENTRY_URL:
             logger.error("[ADMIN_SCORE] Lambda URL not configured")
-            return jsonify({'status': 'error', 'message': 'Lambda URL not configured'}), 500
+            return jsonify({
+                'status': 'error',
+                'message': 'Lambda URL not configured'
+            }), 500
         
         lambda_event = {'body': json.dumps(data)}
         
@@ -611,25 +643,48 @@ def admin_enter_score():
                 timeout=30
             )
             
+            logger.info(f"[ADMIN_SCORE] Lambda response status: {response.status_code}")
+            logger.info(f"[ADMIN_SCORE] Lambda response body: {response.text}")
+            
             lambda_response = response.json()
             
+            # Handle wrapped response from Lambda
             if 'body' in lambda_response:
                 try:
                     actual_response = json.loads(lambda_response['body'])
                     status_code = lambda_response.get('statusCode', 200)
+                    logger.info(f"[ADMIN_SCORE] Parsed response: {actual_response}, Status: {status_code}")
                     return actual_response, status_code
-                except json.JSONDecodeError:
+                except json.JSONDecodeError as e:
+                    logger.error(f"[ADMIN_SCORE] Failed to parse body as JSON: {str(e)}")
+                    logger.error(f"[ADMIN_SCORE] Body content: {lambda_response['body']}")
                     return lambda_response, response.status_code
             else:
+                logger.info(f"[ADMIN_SCORE] No body field in response, returning full response")
                 return lambda_response, response.status_code
         
-        except Exception as e:
+        except requests.exceptions.Timeout:
+            logger.error("[ADMIN_SCORE] Lambda request timed out")
+            return jsonify({
+                'status': 'error',
+                'message': 'Lambda request timed out',
+                'error_code': 'TIMEOUT'
+            }), 504
+        
+        except requests.exceptions.RequestException as e:
             logger.error(f"[ADMIN_SCORE] Lambda request failed: {str(e)}")
-            return jsonify({'status': 'error', 'message': 'Lambda request failed'}), 500
+            return jsonify({
+                'status': 'error',
+                'message': 'Lambda request failed',
+                'error_code': 'LAMBDA_ERROR'
+            }), 500
     
     except Exception as e:
         logger.error(f"[ADMIN_SCORE] Unexpected error: {str(e)}", exc_info=True)
-        return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
+        return jsonify({
+            'status': 'error',
+            'message': 'Internal server error'
+        }), 500
 
 
 @app.route('/api/admin/users', methods=['GET'])
@@ -747,6 +802,96 @@ def admin_get_leaderboard():
     except Exception as e:
         logger.error(f"[ADMIN_LEADERBOARD] Unexpected error: {str(e)}", exc_info=True)
         return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
+    
+# ============================================================================
+# ADMIN GET MATCHES ROUTE
+# ============================================================================
+
+@app.route('/api/admin/get-matches', methods=['POST'])
+def admin_get_matches():
+    """
+    Forward admin get matches request to Lambda
+    
+    Request body:
+    {
+        "action": "get_matches"
+    }
+    
+    Response:
+    {
+        "status": "success",
+        "message": "Matches retrieved successfully",
+        "total_matches": 64,
+        "matches": [...]
+    }
+    """
+    try:
+        logger.info("[ADMIN_GET_MATCHES] Request received")
+        
+        data = request.get_json()
+        
+        if not data:
+            logger.error("[ADMIN_GET_MATCHES] Missing request body")
+            return jsonify({
+                'status': 'error',
+                'message': 'Missing request body'
+            }), 400
+        
+        if not LAMBDA_ADMIN_GET_MATCHES_URL:
+            logger.error("[ADMIN_GET_MATCHES] Lambda URL not configured")
+            return jsonify({
+                'status': 'error',
+                'message': 'Lambda URL not configured'
+            }), 500
+        
+        lambda_event = {'body': json.dumps(data)}
+        
+        logger.info(f"[ADMIN_GET_MATCHES] Forwarding to Lambda: {LAMBDA_ADMIN_GET_MATCHES_URL}")
+        
+        try:
+            response = requests.post(
+                LAMBDA_ADMIN_GET_MATCHES_URL,
+                json=lambda_event,
+                timeout=30
+            )
+            
+            logger.info(f"[ADMIN_GET_MATCHES] Lambda response status: {response.status_code}")
+            
+            lambda_response = response.json()
+            
+            # Handle wrapped response from Lambda
+            if 'body' in lambda_response:
+                try:
+                    actual_response = json.loads(lambda_response['body'])
+                    status_code = lambda_response.get('statusCode', 200)
+                    return actual_response, status_code
+                except json.JSONDecodeError:
+                    return lambda_response, response.status_code
+            else:
+                return lambda_response, response.status_code
+        
+        except requests.exceptions.Timeout:
+            logger.error("[ADMIN_GET_MATCHES] Lambda request timed out")
+            return jsonify({
+                'status': 'error',
+                'message': 'Lambda request timed out',
+                'error_code': 'TIMEOUT'
+            }), 504
+        
+        except requests.exceptions.RequestException as e:
+            logger.error(f"[ADMIN_GET_MATCHES] Lambda request failed: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': 'Lambda request failed',
+                'error_code': 'LAMBDA_ERROR'
+            }), 500
+    
+    except Exception as e:
+        logger.error(f"[ADMIN_GET_MATCHES] Unexpected error: {str(e)}", exc_info=True)
+        return jsonify({
+            'status': 'error',
+            'message': 'Internal server error'
+        }), 500
 
 
 if __name__ == '__main__':
