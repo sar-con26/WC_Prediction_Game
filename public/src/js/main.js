@@ -18,14 +18,18 @@ function initApp() {
     signupPage.innerHTML = createSignupPage();
     app.appendChild(signupPage);
     
-    // ✅ REMOVED: Verification page - no longer needed
-    
-    // Create allocation page
+    // ✅ REMOVED: Verification page - no longer needed    // Create allocation page
     const allocationPage = document.createElement('div');
     allocationPage.className = 'page';
     allocationPage.id = 'allocationPage';
     allocationPage.innerHTML = createAllocationPage();
     app.appendChild(allocationPage);
+    
+    // Create hype timer page
+    const hypeTimerPage = document.createElement('div');
+    hypeTimerPage.className = 'page';
+    hypeTimerPage.id = 'hypeTimerPage';
+    app.appendChild(hypeTimerPage);
     
     // Create home page
     const homePage = document.createElement('div');

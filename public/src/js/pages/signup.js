@@ -1,4 +1,4 @@
-// Sign-Up Page - UPDATED with email domain validation and no verification
+// Sign-Up Page - UPDATED with email domain validation, no verification, and hype timer routing
 
 function createSignupPage() {
     return `

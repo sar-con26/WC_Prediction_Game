@@ -25,7 +25,7 @@ function createGoldenGlovePage() {
             <div class="prediction-card">
                 <div class="prediction-icon">🧤</div>
                 <h2>Who will win the Golden Glove?</h2>
-                <p class="prediction-subtitle">Name the goalkeeper you think will have the best performance (First Name and Surname)</p>
+                <p class="prediction-subtitle">Name the goalkeeper you think will have the best performance (First name and Surname)</p>
                 
                 <div class="prediction-form">
                     <input 
@@ -123,21 +123,44 @@ async function submitGoldenGlove(button) {
         button.innerHTML = originalText;
         button.disabled = false;
 
-        // Navigate to homepage
-        const homePage = document.getElementById('homePage');
-        if (homePage) {
-            // Hide all pages
-            document.querySelectorAll('.page').forEach(page => {
-                page.classList.remove('active');
-                page.style.display = 'none';
-            });
-            
-            // Show home page
-            homePage.innerHTML = createHomePage();
-            homePage.classList.add('active');
-            homePage.style.display = 'block';
+        // Navigate based on admin status
+        const isAdmin = localStorage.getItem('isAdmin') === 'true';
+        console.log('[GOLDEN_GLOVE] User is admin:', isAdmin);
+        
+        if (isAdmin) {
+            // Admins go to home page
+            const homePage = document.getElementById('homePage');
+            if (homePage) {
+                // Hide all pages
+                document.querySelectorAll('.page').forEach(page => {
+                    page.classList.remove('active');
+                    page.style.display = 'none';
+                });
+                
+                // Show home page
+                homePage.innerHTML = createHomePage();
+                homePage.classList.add('active');
+                homePage.style.display = 'block';
+            } else {
+                alert('Error: Homepage not found');
+            }
         } else {
-            alert('Error: Homepage not found');
+            // Regular users go to hype timer
+            const hypeTimerPage = document.getElementById('hypeTimerPage');
+            if (hypeTimerPage) {
+                // Hide all pages
+                document.querySelectorAll('.page').forEach(page => {
+                    page.classList.remove('active');
+                    page.style.display = 'none';
+                });
+                
+                // Show hype timer page
+                hypeTimerPage.innerHTML = createHypeTimerPage();
+                hypeTimerPage.classList.add('active');
+                hypeTimerPage.style.display = 'block';
+            } else {
+                alert('Error: Hype timer page not found');
+            }
         }
 
     } catch (error) {
