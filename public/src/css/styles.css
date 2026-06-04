@@ -165,6 +165,13 @@ body {
     color: rgba(255, 255, 255, 0.5);
 }
 
+.form-hint {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
 .btn {
     width: 100%;
     padding: 14px 20px;
@@ -600,147 +607,196 @@ body {
     color: var(--deloitte-green);
 }
 
-/* SCORE GUESSER PAGE */
-.matches-container {
-    max-width: 900px;
+/* PREDICTION PAGE - IMPROVED UI */
+.prediction-page {
+    max-width: 1000px;
     margin: 0 auto;
+    width: 100%;
 }
 
-.page-title {
+.prediction-header {
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 50px;
 }
 
-.page-title h1 {
+.prediction-header h1 {
     font-size: 2.5rem;
     font-weight: 700;
     color: var(--deloitte-green);
-    margin-bottom: 10px;
+    margin-bottom: 30px;
 }
 
-.page-title p {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 1.1rem;
-}
-
-.match-card {
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    padding: 30px;
-    border-radius: 16px;
-    margin-bottom: 25px;
-    transition: all 0.3s ease;
-}
-
-.match-card:hover {
-    transform: translateY(-3px);
-    background: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-}
-
-.match-header {
-    text-align: center;
-    margin-bottom: 25px;
-    padding-bottom: 15px;
-    border-bottom: 2px solid rgba(134, 188, 37, 0.3);
-}
-
-.match-title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: white;
-}
-
-.match-date {
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 0.9rem;
-    margin-top: 5px;
-}
-
-.match-prediction {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    gap: 30px;
+.progress-indicator {
+    display: flex;
+    justify-content: center;
     align-items: center;
+    gap: 20px;
 }
 
-.team-section {
-    text-align: center;
-}
-
-.team-flag {
-    font-size: 3rem;
-    margin-bottom: 10px;
-}
-
-.team-name {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: white;
-    margin-bottom: 15px;
-}
-
-.score-input {
-    width: 80px;
-    height: 80px;
+.progress-step {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
     background: rgba(255, 255, 255, 0.1);
     border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 16px;
-    color: white;
-    font-size: 2.5rem;
-    font-weight: 700;
-    text-align: center;
-    font-family: inherit;
-    margin: 0 auto 15px;
-    display: block;
-    transition: all 0.3s ease;
-}
-
-.score-input:focus {
-    outline: none;
-    border-color: var(--deloitte-green);
-    background: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 0 0 3px rgba(134, 188, 37, 0.2);
-}
-
-.score-controls {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-}
-
-.score-btn {
-    width: 40px;
-    height: 40px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    color: white;
-    font-size: 1.2rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.score-btn:hover {
-    background: var(--deloitte-green);
-    transform: scale(1.1);
-}
-
-.vs-divider {
-    font-size: 1.5rem;
     font-weight: 700;
+    color: rgba(255, 255, 255, 0.6);
+    transition: all 0.3s ease;
+}
+
+.progress-step.active {
+    background: linear-gradient(135deg, var(--deloitte-green), #9BC53D);
+    border-color: var(--deloitte-green);
+    color: white;
+    box-shadow: 0 0 20px rgba(134, 188, 37, 0.4);
+}
+
+.progress-step.completed {
+    background: rgba(134, 188, 37, 0.3);
+    border-color: var(--deloitte-green);
+    color: var(--deloitte-green);
+}
+
+.progress-line {
+    width: 40px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* PREDICTION CARD IMPROVEMENTS */
+.prediction-card {
+    background: linear-gradient(135deg, rgba(134, 188, 37, 0.15), rgba(59, 130, 246, 0.15));
+    backdrop-filter: blur(15px);
+    border: 2px solid rgba(134, 188, 37, 0.4);
+    border-radius: 20px;
+    padding: 50px 40px;
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: slideInUp 0.6s ease;
+}
+
+.prediction-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    display: block;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.prediction-card h2 {
+    font-size: 2rem;
+    color: white;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+.prediction-subtitle {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.1rem;
+    margin-bottom: 30px;
+    line-height: 1.6;
+}
+
+.prediction-form {
+    margin: 30px 0;
+}
+
+.form-select-large {
+    width: 100%;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(134, 188, 37, 0.3);
+    border-radius: 12px;
+    color: white;
+    font-size: 1.1rem;
+    font-family: inherit;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.form-select-large:hover {
+    border-color: rgba(134, 188, 37, 0.6);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.form-select-large:focus {
+    outline: none;
+    border-color: #86BC25;
+    background: rgba(134, 188, 37, 0.2);
+    box-shadow: 0 0 15px rgba(134, 188, 37, 0.3);
+}
+
+.form-select-large option {
+    background: #0D1F2D;
+    color: white;
+    padding: 10px;
+}
+
+.form-input-large {
+    width: 100%;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(134, 188, 37, 0.3);
+    border-radius: 12px;
+    color: white;
+    font-size: 1.1rem;
+    font-family: inherit;
+    transition: all 0.3s ease;
+}
+
+.form-input-large:focus {
+    outline: none;
+    border-color: #86BC25;
+    background: rgba(134, 188, 37, 0.2);
+    box-shadow: 0 0 15px rgba(134, 188, 37, 0.3);
+}
+
+.form-input-large::placeholder {
     color: rgba(255, 255, 255, 0.5);
 }
 
-.submit-section {
-    text-align: center;
-    margin-top: 40px;
+.character-counter {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+    text-align: right;
 }
 
+.btn-large {
+    padding: 16px 40px !important;
+    font-size: 1.1rem !important;
+    width: 100%;
+    max-width: 400px;
+    margin: 20px auto 0 !important;
+}
+
+.prediction-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+/* BACK BUTTON */
 .back-button {
     position: fixed;
     top: 20px;
@@ -939,20 +995,145 @@ body {
     gap: 4px;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .content-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .match-prediction {
-        grid-template-columns: 1fr;
-        gap: 20px;
-    }
-    
-    .vs-divider {
-        transform: rotate(90deg);
-    }
+/* SCORE GUESSER PAGE */
+.matches-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.page-title {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.page-title h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--deloitte-green);
+    margin-bottom: 10px;
+}
+
+.page-title p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.1rem;
+}
+
+.match-card {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 30px;
+    border-radius: 16px;
+    margin-bottom: 25px;
+    transition: all 0.3s ease;
+}
+
+.match-card:hover {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.match-header {
+    text-align: center;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid rgba(134, 188, 37, 0.3);
+}
+
+.match-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: white;
+}
+
+.match-date {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+
+.match-prediction {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 30px;
+    align-items: center;
+}
+
+.team-section {
+    text-align: center;
+}
+
+.team-flag {
+    font-size: 3rem;
+    margin-bottom: 10px;
+}
+
+.team-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 15px;
+}
+
+.score-input {
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 16px;
+    color: white;
+    font-size: 2.5rem;
+    font-weight: 700;
+    text-align: center;
+    font-family: inherit;
+    margin: 0 auto 15px;
+    display: block;
+    transition: all 0.3s ease;
+}
+
+.score-input:focus {
+    outline: none;
+    border-color: var(--deloitte-green);
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 0 3px rgba(134, 188, 37, 0.2);
+}
+
+.score-controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.score-btn {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.score-btn:hover {
+    background: var(--deloitte-green);
+    transform: scale(1.1);
+}
+
+.vs-divider {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.submit-section {
+    text-align: center;
+    margin-top: 40px;
 }
 
 .header-admin {
@@ -971,4 +1152,77 @@ body {
 
 .admin-link:hover {
     color: #86BC25;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .prediction-card {
+        padding: 30px 20px;
+    }
+    
+    .prediction-icon {
+        font-size: 3rem;
+    }
+    
+    .prediction-card h2 {
+        font-size: 1.5rem;
+    }
+    
+    .prediction-subtitle {
+        font-size: 1rem;
+    }
+    
+    .progress-indicator {
+        gap: 10px;
+    }
+    
+    .progress-step {
+        width: 40px;
+        height: 40px;
+        font-size: 0.9rem;
+    }
+    
+    .progress-line {
+        width: 20px;
+    }
+    
+    .header {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .page {
+        padding: 20px;
+    }
+    
+    .match-prediction {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .vs-divider {
+        transform: rotate(90deg);
+    }
+}
+
+@media (max-width: 480px) {
+    .prediction-card {
+        padding: 20px 15px;
+    }
+    
+    .prediction-icon {
+        font-size: 2.5rem;
+    }
+    
+    .prediction-card h2 {
+        font-size: 1.3rem;
+    }
+    
+    .btn-large {
+        max-width: 100% !important;
+    }
 }
