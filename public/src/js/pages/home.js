@@ -80,9 +80,16 @@ function createHomePage() {
                     <i class="fas fa-trophy"></i> Sweepstake Team Success
                 </h3>
                 <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 15px; font-size: 0.9rem;">Teams ranked by tournament performance</p>
-                <div id="teamLeaderboardContainer" style="min-height: 400px;">
+                <div id="teamLeaderboardContainer" style="min-height: 400px; margin-bottom: 20px;">
                     <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
                         <i class="fas fa-spinner fa-spin"></i> Loading leaderboard...
+                    </div>
+                </div>
+                <div style="margin: 20px 0; text-align: center; color: rgba(255, 255, 255, 0.5); font-size: 1rem; letter-spacing: 8px;">• • •</div>
+                <div style="margin-bottom: 10px; padding-left: 12px; color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Your Sweepstake Team:</div>
+                <div id="userTeamPositionContainer">
+                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
+                        <i class="fas fa-spinner fa-spin"></i> Loading...
                     </div>
                 </div>
             </div>
@@ -110,7 +117,7 @@ async function loadLeaderboards() {
         // Load all leaderboards in parallel
         const [userLeaderboard, teamLeaderboard, regionalComparison] = await Promise.all([
             getUserLeaderboard(10),
-            getTeamLeaderboard(),
+            getTeamLeaderboard(100),
             getRegionalComparison()
         ]);
         
@@ -118,6 +125,27 @@ async function loadLeaderboards() {
         userLeaderboardData = userLeaderboard.leaderboard || [];
         teamLeaderboardData = teamLeaderboard.leaderboard || [];
         regionalComparisonData = regionalComparison.regions || [];
+        
+        // Sort teams by wins (descending), then by draws (descending)
+        teamLeaderboardData.sort((a, b) => {
+            const winsA = a.wins || 0;
+            const winsB = b.wins || 0;
+            const drawsA = a.draws || 0;
+            const drawsB = b.draws || 0;
+            
+            // Primary sort: wins (descending)
+            if (winsA !== winsB) {
+                return winsB - winsA;
+            }
+            
+            // Tiebreaker: draws (descending)
+            return drawsB - drawsA;
+        });
+        
+        // Update ranks after sorting
+        teamLeaderboardData.forEach((team, index) => {
+            team.rank = index + 1;
+        });
         
         // Render leaderboards
         renderUserLeaderboard();
@@ -215,7 +243,7 @@ function renderUserLeaderboard() {
     container.innerHTML = html;
 }
 
-// Render team leaderboard - NOW SHOWS W/D/L INSTEAD OF POINTS
+// Render team leaderboard
 function renderTeamLeaderboard() {
     const container = document.getElementById('teamLeaderboardContainer');
     if (!container) return;
@@ -228,20 +256,23 @@ function renderTeamLeaderboard() {
     let html = '<ul class="leaderboard-list">';
     
     teamLeaderboardData.forEach(team => {
-        // Extract W/D/L from team data if available, otherwise show as TBD
         const wins = team.wins || 0;
         const draws = team.draws || 0;
         const losses = team.losses || 0;
         const goalDifference = team.goal_difference || 0;
         
+        // Check if this is the user's assigned team
+        const assignedTeam = JSON.parse(localStorage.getItem('assignedTeam') || '{}');
+        const isAssignedTeam = assignedTeam.name === team.team;
+        const itemClass = isAssignedTeam ? 'leaderboard-item assigned-team-highlight' : 'leaderboard-item';
+        
         html += `
-            <li class="leaderboard-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+            <li class="${itemClass}" style="flex-direction: column; align-items: flex-start; gap: 8px;">
                 <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <span class="leaderboard-rank">${team.rank}</span>
                         <span>${team.team}</span>
                     </div>
-                    <span class="leaderboard-score">${wins * 3 + draws} pts</span>
                 </div>
                 <div class="team-stats">
                     <span class="stat-item"><i class="fas fa-check-circle" style="color: #86BC25;"></i> ${wins}W</span>
@@ -254,6 +285,55 @@ function renderTeamLeaderboard() {
     });
     
     html += '</ul>';
+    container.innerHTML = html;
+    
+    // Render user's sweepstake team position in separate section
+    renderUserTeamPosition();
+}
+
+// Render user's sweepstake team position
+function renderUserTeamPosition() {
+    const container = document.getElementById('userTeamPositionContainer');
+    if (!container) return;
+    
+    const assignedTeam = JSON.parse(localStorage.getItem('assignedTeam') || '{}');
+    
+    if (!assignedTeam.name) {
+        container.innerHTML = '<div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">No team assigned</div>';
+        return;
+    }
+    
+    const userTeam = teamLeaderboardData.find(t => t.team === assignedTeam.name);
+    
+    if (!userTeam) {
+        container.innerHTML = '<div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">Team not found in leaderboard</div>';
+        return;
+    }
+    
+    const wins = userTeam.wins || 0;
+    const draws = userTeam.draws || 0;
+    const losses = userTeam.losses || 0;
+    const goalDifference = userTeam.goal_difference || 0;
+    
+    const html = `
+        <ul class="leaderboard-list">
+            <li class="leaderboard-item user-highlight" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="leaderboard-rank">${userTeam.rank}</span>
+                        <span>${userTeam.team}</span>
+                    </div>
+                </div>
+                <div class="team-stats">
+                    <span class="stat-item"><i class="fas fa-check-circle" style="color: #86BC25;"></i> ${wins}W</span>
+                    <span class="stat-item"><i class="fas fa-minus-circle" style="color: #F59E0B;"></i> ${draws}D</span>
+                    <span class="stat-item"><i class="fas fa-times-circle" style="color: #EF4444;"></i> ${losses}L</span>
+                    <span class="stat-item"><i class="fas fa-futbol"></i> ${goalDifference > 0 ? '+' : ''}${goalDifference} GD</span>
+                </div>
+            </li>
+        </ul>
+    `;
+    
     container.innerHTML = html;
 }
 
@@ -638,28 +718,6 @@ async function loadMoreHistory(page) {
         alert('Error loading more predictions: ' + error.message);
     }
 }
-
-/**
- * Close history modal
- */
-function closeHistory() {
-    const modal = document.getElementById('historyModal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-}
-
-// Close modal when clicking outside
-document.addEventListener('DOMContentLoaded', function() {
-    const modal = document.getElementById('historyModal');
-    if (modal) {
-        modal.addEventListener('click', function(event) {
-            if (event.target === modal) {
-                closeHistory();
-            }
-        });
-    }
-});
 
 /**
  * Close history modal
