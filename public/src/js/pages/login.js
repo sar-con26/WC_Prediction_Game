@@ -28,9 +28,6 @@ function createLoginPage() {
                     <i class="fas fa-user-plus"></i> Sign Up
                 </button>
                 
-                <div class="forgot-password">
-                    <a href="#" onclick="alert('Password reset link sent to your email!'); return false;">Forgot Password?</a>
-                </div>
             </div>
         </div>
     `;
