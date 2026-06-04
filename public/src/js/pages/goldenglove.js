@@ -25,7 +25,7 @@ function createGoldenGlovePage() {
             <div class="prediction-card">
                 <div class="prediction-icon">🧤</div>
                 <h2>Who will win the Golden Glove?</h2>
-                <p class="prediction-subtitle">Select the goalkeeper you think will have the best performance</p>
+                <p class="prediction-subtitle">Name the goalkeeper you think will have the best performance (First Name and Surname)</p>
                 
                 <div class="prediction-form">
                     <input 

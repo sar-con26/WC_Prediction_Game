@@ -23,7 +23,7 @@ function createGoldenBootPage() {
             <div class="prediction-card">
                 <div class="prediction-icon">👟</div>
                 <h2>Who will win the Golden Boot?</h2>
-                <p class="prediction-subtitle">Select the player you think will score the most goals</p>
+                <p class="prediction-subtitle">Name the player you think will score the most goals (First Name and Surname)</p>
                 
                 <div class="prediction-form">
                     <input 
