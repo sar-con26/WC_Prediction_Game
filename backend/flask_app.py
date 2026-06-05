@@ -705,21 +705,41 @@ def admin_get_users():
                 timeout=30
             )
             
+            logger.info(f"[ADMIN_USERS] Lambda response status: {response.status_code}")
+            
             lambda_response = response.json()
             
+            
+# Handle wrapped response from Lambda
+
             if 'body' in lambda_response:
                 try:
                     actual_response = json.loads(lambda_response['body'])
                     status_code = lambda_response.get('statusCode', 200)
+                    logger.info(f"[ADMIN_USERS] Parsed response, Status: {status_code}")
                     return actual_response, status_code
-                except json.JSONDecodeError:
+                except json.JSONDecodeError as e:
+                    logger.error(f"[ADMIN_USERS] Failed to parse body as JSON: {str(e)}")
                     return lambda_response, response.status_code
             else:
+                logger.info(f"[ADMIN_USERS] No body field in response, returning full response")
                 return lambda_response, response.status_code
         
-        except Exception as e:
+        except requests.exceptions.Timeout:
+            logger.error("[ADMIN_USERS] Lambda request timed out")
+            return jsonify({
+                'status': 'error',
+                'message': 'Lambda request timed out',
+                'error_code': 'TIMEOUT'
+            }), 504
+        
+        except requests.exceptions.RequestException as e:
             logger.error(f"[ADMIN_USERS] Lambda request failed: {str(e)}")
-            return jsonify({'status': 'error', 'message': 'Lambda request failed'}), 500
+            return jsonify({
+                'status': 'error',
+                'message': 'Lambda request failed',
+                'error_code': 'LAMBDA_ERROR'
+            }), 500
     
     except Exception as e:
         logger.error(f"[ADMIN_USERS] Unexpected error: {str(e)}", exc_info=True)
