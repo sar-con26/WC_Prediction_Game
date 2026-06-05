@@ -214,14 +214,29 @@ function renderUserLeaderboard() {
     
     let html = '<ul class="leaderboard-list">';
     
+    const currentUserId = parseInt(localStorage.getItem('userId'));
+    
     userLeaderboardData.forEach(user => {
-        html += `
-            <li class="leaderboard-item">
-                <span class="leaderboard-rank">${user.rank}</span>
-                <span>${user.username}</span>
-                <span class="leaderboard-score">${user.total_points}</span>
-            </li>
-        `;
+        const isCurrentUser = user.user_id === currentUserId;
+        const itemClass = isCurrentUser ? 'leaderboard-item user-highlight' : 'leaderboard-item';
+        
+        if (isCurrentUser) {
+            html += `
+                <li class="${itemClass}">
+                    <span class="leaderboard-rank">${user.rank}</span>
+                    <span>${user.username}</span>
+                    <span class="leaderboard-score" style="background: linear-gradient(135deg, #FF8C00, #FFA500);">${user.total_points}</span>
+                </li>
+            `;
+        } else {
+            html += `
+                <li class="${itemClass}">
+                    <span class="leaderboard-rank">${user.rank}</span>
+                    <span>${user.username}</span>
+                    <span class="leaderboard-score">${user.total_points}</span>
+                </li>
+            `;
+        }
     });
     
     html += '</ul>';
