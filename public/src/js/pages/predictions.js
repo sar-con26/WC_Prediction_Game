@@ -7,7 +7,9 @@
 // - Lock mechanism (2 hours before match)
 // - Show actual scores when finished
 // - Edit/resubmit before deadline
-// - COMPLETE HISTORY MODAL IMPLEMENTATION
+// - Smart match sorting (past → today → future)
+// - Auto-scroll to today's matches
+// - Jump navigation buttons
 
 // Global state
 let matchesData = [];
@@ -54,8 +56,21 @@ function createPredictionsPage() {
 
         <div class="matches-container">
             <div class="page-title fadeInUp">
-                <h1>Upcoming Matches</h1>
+                <h1>Score Predictions</h1>
                 <p>Make your score predictions for the following matches</p>
+            </div>
+
+            <!-- ✅ NEW: Jump Navigation Buttons -->
+            <div class="jump-navigation fadeInUp">
+                <button class="jump-btn" onclick="jumpToSection('past')">
+                    <i class="fas fa-arrow-up"></i> Past Matches
+                </button>
+                <button class="jump-btn active" onclick="jumpToSection('today')">
+                    <i class="fas fa-calendar-day"></i> Today
+                </button>
+                <button class="jump-btn" onclick="jumpToSection('future')">
+                    <i class="fas fa-arrow-down"></i> Future Matches
+                </button>
             </div>
 
             <div id="matchesLoadingContainer" style="text-align: center; padding: 40px;">
@@ -124,6 +139,15 @@ async function loadMatches() {
         // Render matches
         renderMatches();
         
+        // ✅ NEW: Auto-scroll to today's match
+        setTimeout(() => {
+            const todaySection = document.getElementById('today-section');
+            if (todaySection) {
+                todaySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                console.log('[PREDICTIONS] Auto-scrolled to today\'s matches');
+            }
+        }, 300);
+        
         // Start timers for all matches
         startAllTimers();
         
@@ -143,147 +167,121 @@ async function loadMatches() {
 }
 
 /**
- * Render all matches
+ * ✅ NEW: Group matches by date (past, today, future)
+ */
+function groupMatchesByDate() {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const pastMatches = [];
+    const todayMatches = [];
+    const futureMatches = [];
+    
+    matchesData.forEach(match => {
+        const matchDate = new Date(match.match_date_utc);
+        const matchDay = new Date(matchDate.getFullYear(), matchDate.getMonth(), matchDate.getDate());
+        
+        if (matchDay < today) {
+            pastMatches.push(match);
+        } else if (matchDay.getTime() === today.getTime()) {
+            todayMatches.push(match);
+        } else {
+            futureMatches.push(match);
+        }
+    });
+    
+    // Sort each group by date
+    pastMatches.sort((a, b) => new Date(b.match_date_utc) - new Date(a.match_date_utc)); // Newest first
+    todayMatches.sort((a, b) => new Date(a.match_date_utc) - new Date(b.match_date_utc)); // Oldest first
+    futureMatches.sort((a, b) => new Date(a.match_date_utc) - new Date(b.match_date_utc)); // Oldest first
+    
+    return { pastMatches, todayMatches, futureMatches };
+}
+
+/**
+ * Render all matches with grouping and sorting
  */
 function renderMatches() {
     const container = document.getElementById('matchesContainer');
     
     if (!container) return;
     
+    // Group matches by date
+    const { pastMatches, todayMatches, futureMatches } = groupMatchesByDate();
+    
     let html = '';
     
-    matchesData.forEach(match => {
-        const matchState = getMatchState(match);
-        const isLocked = matchState.isLocked;
-        const isFinished = matchState.isFinished;
+    // ✅ PAST MATCHES SECTION (Collapsed by default)
+    if (pastMatches.length > 0) {
+        html += `
+            <div class="matches-section" id="past-section">
+                <div class="section-header" onclick="toggleSection('past')">
+                    <div class="section-title">
+                        <i class="fas fa-chevron-right section-toggle" id="past-toggle"></i>
+                        <i class="fas fa-history"></i> Past Matches
+                        <span class="section-count">${pastMatches.length}</span>
+                    </div>
+                </div>
+                <div class="section-content" id="past-content" style="display: none;">
+        `;
         
-        // Get user's existing prediction if any
-        const existingPrediction = userPredictions[match.match_id] || {};
-        const userHomeScore = existingPrediction.predicted_home_score || '';
-        const userAwayScore = existingPrediction.predicted_away_score || '';
-        
-        // Format match date to Ireland timezone
-        const matchDate = new Date(match.match_date_utc);
-        const formattedDate = matchDate.toLocaleString('en-IE', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            timeZone: 'Europe/Dublin'
+        pastMatches.forEach(match => {
+            html += renderMatchCard(match);
         });
         
-        // Determine card styling based on state
-        let cardClass = 'match-card fadeInUp';
-        if (isLocked) cardClass += ' match-locked';
-        if (isFinished) cardClass += ' match-finished';
-        
         html += `
-            <div class="${cardClass}" id="match-${match.match_id}">
-                <div class="match-header">
-                    <div class="match-title">
-                        ${match.home_team} vs ${match.away_team}
-                    </div>
-                    <div class="match-date">
-                        ${formattedDate}
-                    </div>
-                </div>
-
-                <div class="match-timer-section">
-                    <div class="timer-display" id="timer-${match.match_id}">
-                        ${matchState.timerText}
-                    </div>
-                    ${isLocked && !isFinished ? '<div class="match-locked-badge"><i class="fas fa-lock"></i> Match Locked</div>' : ''}
-                    ${isFinished ? '<div class="match-finished-badge"><i class="fas fa-play-circle"></i> Match In Progress</div>' : ''}
-                </div>
-
-                <div class="match-prediction">
-                    <div class="team-section">
-                        <div class="team-name">${match.home_team}</div>
-                        <input 
-                            type="number" 
-                            class="score-input" 
-                            id="score-${match.match_id}-home" 
-                            value="${userHomeScore}" 
-                            min="0" 
-                            max="20"
-                            ${isLocked || isFinished ? 'disabled' : ''}
-                            placeholder="0"
-                        >
-                        <div class="score-controls" ${isLocked || isFinished ? 'style="opacity: 0.5; pointer-events: none;"' : ''}>
-                            <button 
-                                class="score-btn" 
-                                onclick="decrementScore('score-${match.match_id}-home')"
-                                ${isLocked || isFinished ? 'disabled' : ''}
-                            >
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button 
-                                class="score-btn" 
-                                onclick="incrementScore('score-${match.match_id}-home')"
-                                ${isLocked || isFinished ? 'disabled' : ''}
-                            >
-                                <i class="fas fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="vs-divider">VS</div>
-                    
-                    <div class="team-section">
-                        <div class="team-name">${match.away_team}</div>
-                        <input 
-                            type="number" 
-                            class="score-input" 
-                            id="score-${match.match_id}-away" 
-                            value="${userAwayScore}" 
-                            min="0" 
-                            max="20"
-                            ${isLocked || isFinished ? 'disabled' : ''}
-                            placeholder="0"
-                        >
-                        <div class="score-controls" ${isLocked || isFinished ? 'style="opacity: 0.5; pointer-events: none;"' : ''}>
-                            <button 
-                                class="score-btn" 
-                                onclick="decrementScore('score-${match.match_id}-away')"
-                                ${isLocked || isFinished ? 'disabled' : ''}
-                            >
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button 
-                                class="score-btn" 
-                                onclick="incrementScore('score-${match.match_id}-away')"
-                                ${isLocked || isFinished ? 'disabled' : ''}
-                            >
-                                <i class="fas fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                ${isFinished ? `
-                    <div class="actual-score-section">
-                        <div class="actual-score-label">Final Score</div>
-                        <div class="actual-score">
-                            ${match.home_score !== null ? match.home_score : '-'} - ${match.away_score !== null ? match.away_score : '-'}
-                        </div>
-                    </div>
-                ` : ''}
-
-                <div class="match-actions">
-                    <button 
-                        class="btn btn-primary submit-prediction-btn" 
-                        id="btn-${match.match_id}"
-                        onclick="submitMatchPrediction('${match.match_id}')"
-                        ${isLocked || isFinished ? 'disabled' : ''}
-                    >
-                        <i class="fas fa-check"></i> ${existingPrediction.prediction_id ? 'Update Prediction' : 'Submit Prediction'}
-                    </button>
-                    <div class="submission-feedback" id="feedback-${match.match_id}"></div>
                 </div>
             </div>
         `;
-    });
+    }
+    
+    // ✅ TODAY'S MATCHES SECTION (Expanded, Highlighted)
+    if (todayMatches.length > 0) {
+        html += `
+            <div class="matches-section today-section" id="today-section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <i class="fas fa-calendar-day"></i> Today's Matches
+                        <span class="section-count">${todayMatches.length}</span>
+                    </div>
+                </div>
+                <div class="section-content" id="today-content" style="display: block;">
+        `;
+        
+        todayMatches.forEach(match => {
+            html += renderMatchCard(match);
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+    }
+    
+    // ✅ FUTURE MATCHES SECTION (Expanded)
+    if (futureMatches.length > 0) {
+        html += `
+            <div class="matches-section" id="future-section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <i class="fas fa-calendar-plus"></i> Upcoming Matches
+                        <span class="section-count">${futureMatches.length}</span>
+                    </div>
+                </div>
+                <div class="section-content" id="future-content" style="display: block;">
+        `;
+        
+        futureMatches.forEach(match => {
+            html += renderMatchCard(match);
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+    }
     
     container.innerHTML = html;
     container.style.display = 'block';
@@ -291,16 +289,185 @@ function renderMatches() {
 }
 
 /**
+ * ✅ NEW: Render individual match card
+ */
+function renderMatchCard(match) {
+    const matchState = getMatchState(match);
+    const isLocked = matchState.isLocked;
+    const isFinished = matchState.isFinished;
+    
+    // Get user's existing prediction if any
+    const existingPrediction = userPredictions[match.match_id] || {};
+    const userHomeScore = existingPrediction.predicted_home_score || '';
+    const userAwayScore = existingPrediction.predicted_away_score || '';
+    
+    // Format match date to Ireland timezone
+    const matchDate = new Date(match.match_date_utc);
+    const formattedDate = matchDate.toLocaleString('en-IE', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Europe/Dublin'
+    });
+    
+    // Determine card styling based on state
+    let cardClass = 'match-card fadeInUp';
+    if (isLocked) cardClass += ' match-locked';
+    if (isFinished) cardClass += ' match-finished';
+    
+    return `
+        <div class="${cardClass}" id="match-${match.match_id}">
+            <div class="match-header">
+                <div class="match-title">
+                    ${match.home_team} vs ${match.away_team}
+                </div>
+                <div class="match-date">
+                    ${formattedDate}
+                </div>
+            </div>
+
+            <div class="match-timer-section">
+                <div class="timer-display" id="timer-${match.match_id}">
+                    ${matchState.timerText}
+                </div>
+                ${isLocked && !isFinished ? '<div class="match-locked-badge"><i class="fas fa-lock"></i> Match Locked</div>' : ''}
+                ${isFinished ? '<div class="match-finished-badge"><i class="fas fa-play-circle"></i> Match In Progress</div>' : ''}
+            </div>
+
+            <div class="match-prediction">
+                <div class="team-section">
+                    <div class="team-name">${match.home_team}</div>
+                    <input 
+                        type="number" 
+                        class="score-input" 
+                        id="score-${match.match_id}-home" 
+                        value="${userHomeScore}" 
+                        min="0" 
+                        max="20"
+                        ${isLocked || isFinished ? 'disabled' : ''}
+                        placeholder="0"
+                    >
+                    <div class="score-controls" ${isLocked || isFinished ? 'style="opacity: 0.5; pointer-events: none;"' : ''}>
+                        <button 
+                            class="score-btn" 
+                            onclick="decrementScore('score-${match.match_id}-home')"
+                            ${isLocked || isFinished ? 'disabled' : ''}
+                        >
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <button 
+                            class="score-btn" 
+                            onclick="incrementScore('score-${match.match_id}-home')"
+                            ${isLocked || isFinished ? 'disabled' : ''}
+                        >
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="vs-divider">VS</div>
+                
+                <div class="team-section">
+                    <div class="team-name">${match.away_team}</div>
+                    <input 
+                        type="number" 
+                        class="score-input" 
+                        id="score-${match.match_id}-away" 
+                        value="${userAwayScore}" 
+                        min="0" 
+                        max="20"
+                        ${isLocked || isFinished ? 'disabled' : ''}
+                        placeholder="0"
+                    >
+                    <div class="score-controls" ${isLocked || isFinished ? 'style="opacity: 0.5; pointer-events: none;"' : ''}>
+                        <button 
+                            class="score-btn" 
+                            onclick="decrementScore('score-${match.match_id}-away')"
+                            ${isLocked || isFinished ? 'disabled' : ''}
+                        >
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <button 
+                            class="score-btn" 
+                            onclick="incrementScore('score-${match.match_id}-away')"
+                            ${isLocked || isFinished ? 'disabled' : ''}
+                        >
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            ${isFinished ? `
+                <div class="actual-score-section">
+                    <div class="actual-score-label">Final Score</div>
+                    <div class="actual-score">
+                        ${match.home_score !== null ? match.home_score : '-'} - ${match.away_score !== null ? match.away_score : '-'}
+                    </div>
+                </div>
+            ` : ''}
+
+            <div class="match-actions">
+                <button 
+                    class="btn btn-primary submit-prediction-btn" 
+                    id="btn-${match.match_id}"
+                    onclick="submitMatchPrediction('${match.match_id}')"
+                    ${isLocked || isFinished ? 'disabled' : ''}
+                >
+                    <i class="fas fa-check"></i> ${existingPrediction.prediction_id ? 'Update Prediction' : 'Submit Prediction'}
+                </button>
+                <div class="submission-feedback" id="feedback-${match.match_id}"></div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * ✅ NEW: Toggle section visibility (Past matches only)
+ */
+function toggleSection(sectionName) {
+    const content = document.getElementById(`${sectionName}-content`);
+    const toggle = document.getElementById(`${sectionName}-toggle`);
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        toggle.style.transform = 'rotate(90deg)';
+    } else {
+        content.style.display = 'none';
+        toggle.style.transform = 'rotate(0deg)';
+    }
+}
+
+/**
+ * ✅ NEW: Jump to section with smooth scroll
+ */
+function jumpToSection(sectionName) {
+    const section = document.getElementById(`${sectionName}-section`);
+    if (section) {
+        // If it's past section, expand it first
+        if (sectionName === 'past') {
+            const content = document.getElementById('past-content');
+            if (content && content.style.display === 'none') {
+                toggleSection('past');
+            }
+        }
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+/**
  * Get match state (upcoming, locked, finished)
- * FIXED: Timer now returns proper D/H/M/S format
  */
 function getMatchState(match) {
     const now = new Date();
     const matchTime = new Date(match.match_date_utc);
     const deadlineTime = new Date(matchTime.getTime() - (2 * 60 * 60 * 1000)); // 2 hours before
     
-    const isFinished = match.status === 'finished' || match.status === 'in_progress';
-    const isLocked = now >= deadlineTime;
+    // ✅ FIXED: Check if match has actually started (current time >= match time)
+    const isFinished = now >= matchTime;
+    const isLocked = now >= deadlineTime && !isFinished;
     
     let timerText = '';
     
@@ -309,7 +476,7 @@ function getMatchState(match) {
     } else if (isLocked) {
         timerText = '<i class="fas fa-lock"></i> Match Locked';
     } else {
-        // Calculate time remaining
+        // Calculate time remaining until deadline (2 hours before match)
         const timeRemaining = deadlineTime - now;
         timerText = formatTimeRemaining(timeRemaining);
     }
@@ -323,8 +490,6 @@ function getMatchState(match) {
 
 /**
  * Format time remaining in D/H/M/S format
- * FIXED: Properly formats countdown timer
- * Examples: "2d 5h 30m 15s" or "5h 30m 15s" (no days if 0)
  */
 function formatTimeRemaining(milliseconds) {
     const totalSeconds = Math.floor(milliseconds / 1000);
@@ -557,7 +722,6 @@ async function submitMatchPrediction(matchId) {
 
 /**
  * Open prediction history modal
- * COMPLETE IMPLEMENTATION - Shows all finished predictions
  */
 async function openHistory() {
     try {
