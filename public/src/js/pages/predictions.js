@@ -38,6 +38,17 @@ function createPredictionsPage() {
             </div>
         </div>
 
+        <script>
+            // ✅ NEW: Display actual team name in header
+            (function() {
+                const assignedTeam = JSON.parse(localStorage.getItem('assignedTeam') || '{}');
+                const userTeamDisplay = document.getElementById('userTeamDisplay');
+                if (userTeamDisplay && assignedTeam.name) {
+                    userTeamDisplay.textContent = (assignedTeam.flag || '⚽') + ' ' + assignedTeam.name;
+                }
+            })();
+        </script>
+
         <div class="my-points-card fadeInUp">
             <div class="my-points-stats">
                 <div class="points-stat">
@@ -89,11 +100,26 @@ function createPredictionsPage() {
 }
 
 /**
+ * ✅ NEW: Update team display in header
+ */
+function updateTeamDisplay() {
+    const assignedTeam = JSON.parse(localStorage.getItem('assignedTeam') || '{}');
+    const userTeamDisplay = document.getElementById('userTeamDisplay');
+    if (userTeamDisplay && assignedTeam.name) {
+        userTeamDisplay.textContent = (assignedTeam.flag || '⚽') + ' ' + assignedTeam.name;
+        console.log('[PREDICTIONS] Updated team display:', assignedTeam.name);
+    }
+}
+
+/**
  * Load matches and user predictions when predictions page is shown
  */
 async function loadMatches() {
     try {
         console.log('[PREDICTIONS] Loading matches and user predictions...');
+        
+        // ✅ NEW: Update team display
+        updateTeamDisplay();
         
         // Get user ID from localStorage
         const userId = parseInt(localStorage.getItem('userId'));
