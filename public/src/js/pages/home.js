@@ -365,20 +365,22 @@ function renderRegionalComparison() {
     // Find max points for scaling
     const maxPoints = Math.max(...regionalComparisonData.map(r => r.total_points), 1);
     
-    let html = '<div class="chart-placeholder"><div class="chart-bars">';
+    let html = '<div class="chart-placeholder" style="overflow-x: auto; padding: 20px 0;"><div class="chart-bars" style="display: flex; justify-content: center; align-items: flex-end; gap: 40px; min-height: 500px; padding: 20px 20px 120px 20px;">';
     
     regionalComparisonData.forEach(region => {
         const heightPercent = (region.total_points / maxPoints) * 100;
-        const height = Math.max(heightPercent, 20); // Minimum height for visibility
+        const height = Math.max(heightPercent * 1.2, 30); // Scale height appropriately
         
         html += `
-            <div class="chart-bar">
-                <div class="bar barGrow" style="height: ${height}px;">
-                    <span class="bar-value">${region.total_points}</span>
+            <div class="chart-bar" style="display: flex; flex-direction: column; align-items: center; gap: 20px; flex-shrink: 0;">
+                <div class="bar barGrow" style="height: ${height}px; width: 80px; background: linear-gradient(180deg, #86BC25, #6BA820); border-radius: 8px 8px 0 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 10px; box-shadow: 0 4px 12px rgba(134, 188, 37, 0.3);">
+                    <span class="bar-value" style="color: white; font-weight: 700; font-size: 1.2rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">${region.total_points}</span>
                 </div>
-                <span class="bar-label">${region.office_location}</span>
-                <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); margin-top: 5px;">
-                    ${region.total_users} users
+                <div style="text-align: center; min-width: 100px;">
+                    <span class="bar-label" style="font-weight: 700; font-size: 1rem; color: #86BC25; display: block; margin-bottom: 8px;">${region.office_location}</span>
+                    <div style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.95); font-weight: 500; background: rgba(134, 188, 37, 0.15); padding: 6px 12px; border-radius: 4px; display: inline-block;">
+                        ${region.total_users} users
+                    </div>
                 </div>
             </div>
         `;
