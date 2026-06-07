@@ -1,5 +1,3 @@
-// Admin Dashboard - WORKING FIX
-// Uses proper click handlers instead of onchange
 
 // Check if user is admin
 function isUserAdmin() {
@@ -68,13 +66,13 @@ function createAdminPage() {
                 <p class="admin-subtitle">Enter actual match scores to update leaderboards</p>
                 
                 <div class="match-entry-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="match-select">Select Match</label>
-                            <select id="match-select" class="form-input">
+                    <div class="form-group">
+                        <label for="match-select">Select Match</label>
+                        <div style="display: flex; gap: 10px;">
+                            <select id="match-select" class="form-input" style="flex: 1;">
                                 <option value="">-- Click to load matches --</option>
                             </select>
-                            <button class="admin-button" onclick="loadAdminMatches()" style="margin-top: 10px; width: 100%;">
+                            <button class="btn btn-primary" onclick="loadAdminMatches()" style="white-space: nowrap;">
                                 <i class="fas fa-download"></i> Load Matches
                             </button>
                         </div>
@@ -91,14 +89,15 @@ function createAdminPage() {
                         </div>
                     </div>
 
-                    <button class="admin-button" onclick="submitMatchScore()">
+                    <button class="btn btn-primary" onclick="submitMatchScore()" style="width: 100%;">
                         <i class="fas fa-check"></i> Submit Score
                     </button>
                 </div>
 
                 <h3>Match Results</h3>
                 <div id="match-results-container" style="min-height: 300px;">
-                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
+                    <div style="text-align: center; padding: 40px 20px; color: rgba(255, 255, 255, 0.6);">
+                        <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
                         <p>Click "Load Matches" button above to load matches</p>
                     </div>
                 </div>
@@ -116,8 +115,9 @@ function createAdminPage() {
                 </div>
 
                 <div id="users-container" style="min-height: 400px;">
-                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
-                        <p>Users will load when you click this tab</p>
+                    <div style="text-align: center; padding: 40px 20px; color: rgba(255, 255, 255, 0.6);">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                        <p>Loading users...</p>
                     </div>
                 </div>
             </div>
@@ -140,8 +140,9 @@ function createAdminPage() {
                 </div>
 
                 <div id="predictions-container" style="min-height: 400px;">
-                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
-                        <p>Predictions will load when you click this tab</p>
+                    <div style="text-align: center; padding: 40px 20px; color: rgba(255, 255, 255, 0.6);">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                        <p>Loading predictions...</p>
                     </div>
                 </div>
             </div>
@@ -170,8 +171,9 @@ function createAdminPage() {
 
                 <h3>Top 10 Users</h3>
                 <div id="leaderboard-container" style="min-height: 400px;">
-                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
-                        <p>Leaderboard will load when you click this tab</p>
+                    <div style="text-align: center; padding: 40px 20px; color: rgba(255, 255, 255, 0.6);">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                        <p>Loading leaderboard...</p>
                     </div>
                 </div>
             </div>
@@ -210,7 +212,6 @@ function switchAdminTab(event, tabName) {
     // Load data for the tab ONLY when clicked
     console.log('[ADMIN] Loading data for tab:', tabName);
     if (tabName === 'match-scores') {
-        // Don't auto-load, user clicks button
         console.log('[ADMIN] Match Scores tab activated - waiting for user to click Load button');
     } else if (tabName === 'users') {
         loadUsers();
@@ -222,19 +223,16 @@ function switchAdminTab(event, tabName) {
 }
 
 // ============================================================================
-// MATCH SCORES TAB - WORKING VERSION
+// MATCH SCORES TAB
 // ============================================================================
 
-// Load matches - CALLED BY BUTTON CLICK
 async function loadAdminMatches() {
     try {
         console.log('[ADMIN] ===== LOADING MATCHES =====');
         
-        // Show loading state
         const container = document.getElementById('match-results-container');
         container.innerHTML = '<div style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading matches...</div>';
         
-        // Use the existing fetchMatches from api.js
         const response = await fetchMatches();
         
         console.log('[ADMIN] Matches response:', response);
@@ -248,7 +246,6 @@ async function loadAdminMatches() {
         
         console.log('[ADMIN] Found', response.matches.length, 'matches');
         
-        // Populate dropdown
         let html = '<option value="">-- Select a match --</option>';
         response.matches.forEach(match => {
             const matchDate = new Date(match.match_date_utc).toLocaleString('en-IE', {
@@ -262,7 +259,6 @@ async function loadAdminMatches() {
         document.getElementById('match-select').innerHTML = html;
         console.log('[ADMIN] Dropdown populated with', response.matches.length, 'matches');
         
-        // Load match results table
         renderMatchResults(response.matches);
         
         console.log('[ADMIN] ===== MATCHES LOADED SUCCESSFULLY =====');
@@ -274,23 +270,6 @@ async function loadAdminMatches() {
     }
 }
 
-// Load match details when selected
-function loadMatchDetails() {
-    const select = document.getElementById('match-select');
-    const matchId = select.value;
-    
-    if (!matchId) {
-        document.getElementById('team1-score').value = '';
-        document.getElementById('team2-score').value = '';
-        return;
-    }
-    
-    // Clear scores
-    document.getElementById('team1-score').value = '';
-    document.getElementById('team2-score').value = '';
-}
-
-// Render match results table
 function renderMatchResults(matches) {
     const container = document.getElementById('match-results-container');
     
@@ -341,7 +320,6 @@ function renderMatchResults(matches) {
     container.innerHTML = html;
 }
 
-// Submit match score
 async function submitMatchScore() {
     const matchSelect = document.getElementById('match-select');
     const matchId = matchSelect.value;
@@ -381,10 +359,8 @@ async function submitMatchScore() {
         if (response.status === 'success') {
             alert(`✅ Score submitted!\n${response.home_team} ${response.home_score} - ${response.away_score} ${response.away_team}\n${response.predictions_updated} predictions updated`);
             
-            // Reload matches
             loadAdminMatches();
             
-            // Clear form
             document.getElementById('team1-score').value = '';
             document.getElementById('team2-score').value = '';
             document.getElementById('match-select').value = '';
