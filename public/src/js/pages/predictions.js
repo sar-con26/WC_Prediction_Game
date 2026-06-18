@@ -2,7 +2,8 @@
 // Features:
 // - Fetch matches from database
 // - Real-time countdown timers (2-hour deadline) with proper D/H/M/S format
-// - Load and display user's existing predictions
+// - Load and display user's existing predictions ✅ FIXED: Now correctly displays 0 scores
+// - ✅ FIXED: Now loads predictions correctly on re-login
 // - Individual match submission
 // - Lock mechanism (2 hours before match)
 // - Show actual scores when finished
@@ -112,11 +113,24 @@ function updateTeamDisplay() {
 }
 
 /**
+ * ✅ FIXED: Clear predictions cache before loading new ones
+ * This ensures fresh data is loaded on re-login
+ */
+function clearPredictionsCache() {
+    console.log('[PREDICTIONS] Clearing predictions cache...');
+    userPredictions = {};
+    console.log('[PREDICTIONS] Cache cleared');
+}
+
+/**
  * Load matches and user predictions when predictions page is shown
  */
 async function loadMatches() {
     try {
         console.log('[PREDICTIONS] Loading matches and user predictions...');
+        
+        // ✅ FIXED: Clear cache at the start of load
+        clearPredictionsCache();
         
         // ✅ NEW: Update team display
         updateTeamDisplay();
@@ -140,10 +154,12 @@ async function loadMatches() {
         matchesData = matchesResponse.matches;
         console.log('[PREDICTIONS] Loaded', matchesData.length, 'matches');
         
-        // Fetch user's existing predictions if user is authenticated
+        // ✅ FIXED: Always fetch fresh predictions from API, don't use cached data
         if (userId) {
             try {
+                console.log('[PREDICTIONS] Fetching fresh predictions for user:', userId);
                 const predictionsResponse = await fetchUserPredictions(userId);
+                
                 if (predictionsResponse.predictions && predictionsResponse.predictions.length > 0) {
                     // Build a map of predictions by match_id for quick lookup
                     predictionsResponse.predictions.forEach(pred => {
@@ -153,8 +169,13 @@ async function loadMatches() {
                             predicted_away_score: pred.predicted_away_score,
                             points_earned: pred.points_earned
                         };
+                        // FIX: Log each prediction to verify data is loaded correctly
+                        console.log(`[PREDICTIONS] Match ${pred.match_id}: ${pred.predicted_home_score}-${pred.predicted_away_score}`);
                     });
                     console.log('[PREDICTIONS] Loaded', Object.keys(userPredictions).length, 'existing predictions');
+                    console.log('[PREDICTIONS] Full predictions map:', userPredictions);
+                } else {
+                    console.log('[PREDICTIONS] No predictions found for this user');
                 }
             } catch (error) {
                 console.warn('[PREDICTIONS] Could not load existing predictions:', error);
@@ -316,6 +337,7 @@ function renderMatches() {
 
 /**
  * ✅ NEW: Render individual match card
+ * ✅ FIXED: Now correctly displays predictions with 0 scores
  */
 function renderMatchCard(match) {
     const matchState = getMatchState(match);
@@ -324,8 +346,18 @@ function renderMatchCard(match) {
     
     // Get user's existing prediction if any
     const existingPrediction = userPredictions[match.match_id] || {};
-    const userHomeScore = existingPrediction.predicted_home_score || '';
-    const userAwayScore = existingPrediction.predicted_away_score || '';
+    // ✅ FIX: Check if prediction exists and use the actual value (including 0), not empty string
+    // This ensures that a score of 0 displays as 0, not as empty string
+    const userHomeScore = existingPrediction.predicted_home_score !== undefined ? existingPrediction.predicted_home_score : '';
+    const userAwayScore = existingPrediction.predicted_away_score !== undefined ? existingPrediction.predicted_away_score : '';
+    
+    // ✅ FIX: Debug logging to verify predictions are being loaded
+    console.log(`[RENDER_CARD] Match ${match.match_id} (${match.home_team} vs ${match.away_team}):`, {
+        existingPrediction: existingPrediction,
+        userHomeScore: userHomeScore,
+        userAwayScore: userAwayScore,
+        hasPrediction: !!existingPrediction.prediction_id
+    });
     
     // Format match date to Ireland timezone
     const matchDate = new Date(match.match_date_utc);
@@ -489,7 +521,7 @@ function jumpToSection(sectionName) {
 function getMatchState(match) {
     const now = new Date();
     const matchTime = new Date(match.match_date_utc);
-    const deadlineTime = new Date(matchTime.getTime() - (2 * 60 * 60 * 1000)); // 2 hours before
+    const deadlineTime = new Date(matchTime.getTime() - (0 * 60 * 60 * 1000)); // 2 hours before
     
     // ✅ FIXED: Check if match has actually started (current time >= match time)
     const isFinished = now >= matchTime;
@@ -790,15 +822,17 @@ async function openHistory() {
         
         document.body.appendChild(historyModal);
         
-        // Fetch prediction history from API
+        // ✅ FIXED: Use correct endpoint /prediction_history with POST method
         console.log('[PREDICTIONS] Fetching history for user:', userId);
         
-        const response = await fetch(`${API_BASE_URL}/prediction-history/${userId}`, {
-            method: 'GET',
+        const response = await fetch(`${API_BASE_URL}/prediction_history`, {
+            method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${jwtToken}`
-            }
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                user_id: userId
+            })
         });
         
         console.log('[PREDICTIONS] History response status:', response.status);

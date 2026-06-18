@@ -1,3 +1,5 @@
+// Admin Dashboard - UPDATED WITH POST REQUESTS
+// Uses proper click handlers instead of onchange
 
 // Check if user is admin
 function isUserAdmin() {
@@ -66,13 +68,13 @@ function createAdminPage() {
                 <p class="admin-subtitle">Enter actual match scores to update leaderboards</p>
                 
                 <div class="match-entry-form">
-                    <div class="form-group">
-                        <label for="match-select">Select Match</label>
-                        <div style="display: flex; gap: 10px;">
-                            <select id="match-select" class="form-input" style="flex: 1;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="match-select">Select Match</label>
+                            <select id="match-select" class="form-input">
                                 <option value="">-- Click to load matches --</option>
                             </select>
-                            <button class="btn btn-primary" onclick="loadAdminMatches()" style="white-space: nowrap;">
+                            <button class="admin-button" onclick="loadAdminMatches()" style="margin-top: 10px; width: 100%;">
                                 <i class="fas fa-download"></i> Load Matches
                             </button>
                         </div>
@@ -89,15 +91,14 @@ function createAdminPage() {
                         </div>
                     </div>
 
-                    <button class="btn btn-primary" onclick="submitMatchScore()" style="width: 100%;">
+                    <button class="admin-button" onclick="submitMatchScore()">
                         <i class="fas fa-check"></i> Submit Score
                     </button>
                 </div>
 
                 <h3>Match Results</h3>
                 <div id="match-results-container" style="min-height: 300px;">
-                    <div style="text-align: center; padding: 40px 20px; color: rgba(255, 255, 255, 0.6);">
-                        <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
                         <p>Click "Load Matches" button above to load matches</p>
                     </div>
                 </div>
@@ -115,9 +116,8 @@ function createAdminPage() {
                 </div>
 
                 <div id="users-container" style="min-height: 400px;">
-                    <div style="text-align: center; padding: 40px 20px; color: rgba(255, 255, 255, 0.6);">
-                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
-                        <p>Loading users...</p>
+                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
+                        <p>Users will load when you click this tab</p>
                     </div>
                 </div>
             </div>
@@ -140,9 +140,8 @@ function createAdminPage() {
                 </div>
 
                 <div id="predictions-container" style="min-height: 400px;">
-                    <div style="text-align: center; padding: 40px 20px; color: rgba(255, 255, 255, 0.6);">
-                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
-                        <p>Loading predictions...</p>
+                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
+                        <p>Predictions will load when you click this tab</p>
                     </div>
                 </div>
             </div>
@@ -171,9 +170,8 @@ function createAdminPage() {
 
                 <h3>Top 10 Users</h3>
                 <div id="leaderboard-container" style="min-height: 400px;">
-                    <div style="text-align: center; padding: 40px 20px; color: rgba(255, 255, 255, 0.6);">
-                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
-                        <p>Loading leaderboard...</p>
+                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
+                        <p>Leaderboard will load when you click this tab</p>
                     </div>
                 </div>
             </div>
@@ -223,16 +221,19 @@ function switchAdminTab(event, tabName) {
 }
 
 // ============================================================================
-// MATCH SCORES TAB
+// MATCH SCORES TAB - WORKING VERSION
 // ============================================================================
 
+// Load matches - CALLED BY BUTTON CLICK
 async function loadAdminMatches() {
     try {
         console.log('[ADMIN] ===== LOADING MATCHES =====');
         
+        // Show loading state
         const container = document.getElementById('match-results-container');
         container.innerHTML = '<div style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading matches...</div>';
         
+        // Use the existing fetchMatches from api.js
         const response = await fetchMatches();
         
         console.log('[ADMIN] Matches response:', response);
@@ -246,6 +247,7 @@ async function loadAdminMatches() {
         
         console.log('[ADMIN] Found', response.matches.length, 'matches');
         
+        // Populate dropdown
         let html = '<option value="">-- Select a match --</option>';
         response.matches.forEach(match => {
             const matchDate = new Date(match.match_date_utc).toLocaleString('en-IE', {
@@ -259,6 +261,7 @@ async function loadAdminMatches() {
         document.getElementById('match-select').innerHTML = html;
         console.log('[ADMIN] Dropdown populated with', response.matches.length, 'matches');
         
+        // Load match results table
         renderMatchResults(response.matches);
         
         console.log('[ADMIN] ===== MATCHES LOADED SUCCESSFULLY =====');
@@ -270,6 +273,23 @@ async function loadAdminMatches() {
     }
 }
 
+// Load match details when selected
+function loadMatchDetails() {
+    const select = document.getElementById('match-select');
+    const matchId = select.value;
+    
+    if (!matchId) {
+        document.getElementById('team1-score').value = '';
+        document.getElementById('team2-score').value = '';
+        return;
+    }
+    
+    // Clear scores
+    document.getElementById('team1-score').value = '';
+    document.getElementById('team2-score').value = '';
+}
+
+// Render match results table
 function renderMatchResults(matches) {
     const container = document.getElementById('match-results-container');
     
@@ -320,6 +340,7 @@ function renderMatchResults(matches) {
     container.innerHTML = html;
 }
 
+// Submit match score
 async function submitMatchScore() {
     const matchSelect = document.getElementById('match-select');
     const matchId = matchSelect.value;
@@ -357,10 +378,14 @@ async function submitMatchScore() {
         console.log('[ADMIN] Score submission response:', response);
         
         if (response.status === 'success') {
-            alert(`✅ Score submitted!\n${response.home_team} ${response.home_score} - ${response.away_score} ${response.away_team}\n${response.predictions_updated} predictions updated`);
+            alert(`✅ Score submitted!
+${response.home_team} ${response.home_score} - ${response.away_score} ${response.away_team}
+${response.predictions_updated} predictions updated`);
             
+            // Reload matches
             loadAdminMatches();
             
+            // Clear form
             document.getElementById('team1-score').value = '';
             document.getElementById('team2-score').value = '';
             document.getElementById('match-select').value = '';
@@ -471,17 +496,31 @@ async function loadPredictions() {
     try {
         console.log('[ADMIN] Loading predictions...');
         
-        const response = await fetchAllPredictions();
+        // ✅ FIXED: Use POST instead of GET
+        const response = await fetch(`${API_BASE_URL}/admin_predictions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_all_predictions' })
+        });
         
-        if (!response.predictions || response.predictions.length === 0) {
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch predictions');
+        }
+        
+        // Handle both direct response and wrapped response
+        const predictions = data.data?.predictions || data.predictions || [];
+        
+        if (!predictions || predictions.length === 0) {
             document.getElementById('predictions-container').innerHTML = '<p style="text-align: center; color: rgba(255, 255, 255, 0.6);">No predictions found</p>';
             return;
         }
         
-        allPredictions = response.predictions;
+        allPredictions = predictions;
         renderPredictions(allPredictions);
         
-        console.log('[ADMIN] Predictions loaded:', response.predictions.length);
+        console.log('[ADMIN] Predictions loaded:', predictions.length);
     } catch (error) {
         console.error('[ADMIN] Error loading predictions:', error);
         document.getElementById('predictions-container').innerHTML = `<p style="text-align: center; color: #EF4444;">Error loading predictions: ${error.message}</p>`;
@@ -504,6 +543,7 @@ function renderPredictions(predictions) {
                     <th>Type</th>
                     <th>Prediction</th>
                     <th>Result</th>
+                    <th>Accuracy</th>
                     <th>Points</th>
                     <th>Date</th>
                 </tr>
@@ -522,12 +562,18 @@ function renderPredictions(predictions) {
         let typeDisplay = '';
         let predictionDisplay = '';
         let resultDisplay = '';
+        let accuracyDisplay = '-';
         let pointsDisplay = pred.points_earned || '0';
         
         if (pred.prediction_type === 'match') {
             typeDisplay = '<span class="badge-type match">Match Score</span>';
-            predictionDisplay = `${pred.home_team} ${pred.predicted_home_score}-${pred.predicted_away_score} ${pred.away_team}`;
-            resultDisplay = pred.home_score !== null ? `${pred.home_team} ${pred.home_score}-${pred.away_score} ${pred.away_team}` : '-';
+            predictionDisplay = `${pred.predicted_home_score}-${pred.predicted_away_score}`;
+            resultDisplay = pred.home_score !== null ? `${pred.home_score}-${pred.away_score}` : '-';
+            
+            // Calculate accuracy
+            if (pred.accuracy !== undefined) {
+                accuracyDisplay = `<span style="color: ${pred.accuracy === 100 ? '#10B981' : pred.accuracy === 66 ? '#F59E0B' : pred.accuracy === 33 ? '#F97316' : '#EF4444'};">${pred.accuracy}%</span>`;
+            }
         } else if (pred.prediction_type === 'tournament') {
             typeDisplay = '<span class="badge-type tournament">Tournament</span>';
             predictionDisplay = pred.country_guess || '-';
@@ -550,6 +596,7 @@ function renderPredictions(predictions) {
                 <td>${typeDisplay}</td>
                 <td>${predictionDisplay}</td>
                 <td>${resultDisplay}</td>
+                <td>${accuracyDisplay}</td>
                 <td><span class="${pointsClass}">+${pointsDisplay}</span></td>
                 <td>${predDate}</td>
             </tr>
@@ -583,13 +630,27 @@ async function loadLeaderboard() {
     try {
         console.log('[ADMIN] Loading leaderboard...');
         
-        const response = await fetchAdminLeaderboard();
+        // ✅ FIXED: Use POST instead of GET
+        const response = await fetch(`${API_BASE_URL}/admin_leaderboard`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_admin_leaderboard' })
+        });
         
-        document.getElementById('stat-total-users').textContent = response.stats.total_users;
-        document.getElementById('stat-total-predictions').textContent = response.stats.total_predictions;
-        document.getElementById('stat-completed-matches').textContent = response.stats.completed_matches;
+        const data = await response.json();
         
-        renderLeaderboard(response.leaderboard);
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch leaderboard');
+        }
+        
+        // Handle both direct response and wrapped response
+        const responseData = data.data || data;
+        
+        document.getElementById('stat-total-users').textContent = responseData.stats?.total_users || 0;
+        document.getElementById('stat-total-predictions').textContent = responseData.stats?.total_predictions || 0;
+        document.getElementById('stat-completed-matches').textContent = responseData.stats?.completed_matches || 0;
+        
+        renderLeaderboard(responseData.leaderboard || []);
         
         console.log('[ADMIN] Leaderboard loaded');
     } catch (error) {
@@ -609,6 +670,7 @@ function renderLeaderboard(leaderboard) {
                     <th>User</th>
                     <th>Team</th>
                     <th>Points</th>
+                    <th>Accuracy</th>
                     <th>Predictions</th>
                 </tr>
             </thead>
@@ -616,12 +678,15 @@ function renderLeaderboard(leaderboard) {
     `;
     
     leaderboard.forEach(user => {
+        const accuracy = user.accuracy_percentage ? `${user.accuracy_percentage.toFixed(1)}%` : '-';
+        
         html += `
             <tr>
                 <td>${user.rank}</td>
                 <td>${user.username}</td>
                 <td>${user.sweepstake_country || '-'}</td>
                 <td><span class="score-badge">${user.total_points}</span></td>
+                <td>${accuracy}</td>
                 <td>${user.prediction_count}</td>
             </tr>
         `;

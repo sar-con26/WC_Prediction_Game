@@ -24,6 +24,13 @@ PUBLIC_DIR = os.path.join(os.path.dirname(BASE_DIR), 'public')
 app = Flask(__name__)
 CORS(app)
 
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -705,41 +712,21 @@ def admin_get_users():
                 timeout=30
             )
             
-            logger.info(f"[ADMIN_USERS] Lambda response status: {response.status_code}")
-            
             lambda_response = response.json()
             
-            
-# Handle wrapped response from Lambda
-
             if 'body' in lambda_response:
                 try:
                     actual_response = json.loads(lambda_response['body'])
                     status_code = lambda_response.get('statusCode', 200)
-                    logger.info(f"[ADMIN_USERS] Parsed response, Status: {status_code}")
                     return actual_response, status_code
-                except json.JSONDecodeError as e:
-                    logger.error(f"[ADMIN_USERS] Failed to parse body as JSON: {str(e)}")
+                except json.JSONDecodeError:
                     return lambda_response, response.status_code
             else:
-                logger.info(f"[ADMIN_USERS] No body field in response, returning full response")
                 return lambda_response, response.status_code
         
-        except requests.exceptions.Timeout:
-            logger.error("[ADMIN_USERS] Lambda request timed out")
-            return jsonify({
-                'status': 'error',
-                'message': 'Lambda request timed out',
-                'error_code': 'TIMEOUT'
-            }), 504
-        
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             logger.error(f"[ADMIN_USERS] Lambda request failed: {str(e)}")
-            return jsonify({
-                'status': 'error',
-                'message': 'Lambda request failed',
-                'error_code': 'LAMBDA_ERROR'
-            }), 500
+            return jsonify({'status': 'error', 'message': 'Lambda request failed'}), 500
     
     except Exception as e:
         logger.error(f"[ADMIN_USERS] Unexpected error: {str(e)}", exc_info=True)
@@ -913,6 +900,145 @@ def admin_get_matches():
             'message': 'Internal server error'
         }), 500
 
+@app.route('/api/admin/reset-password', methods=['POST'])
+def admin_reset_password():
+    """Reset user password"""
+    import hashlib
+    import mysql.connector
+    
+    try:
+        logger.info("[ADMIN_RESET_PASSWORD] Password reset request received")
+        
+        data = request.get_json()
+        email = data.get('email')
+        new_password = data.get('new_password')
+        
+        if not email or not new_password:
+            logger.error("[ADMIN_RESET_PASSWORD] Missing email or password")
+            return jsonify({
+                'status': 'error',
+                'message': 'Missing email or new_password'
+            }), 400
+        
+        try:
+            connection = mysql.connector.connect(
+                host=os.environ.get('DB_HOST'),
+                user=os.environ.get('DB_USER'),
+                password=os.environ.get('DB_PASSWORD'),
+                database=os.environ.get('DB_NAME')
+            )
+            cursor = connection.cursor()
+            password_hash = hashlib.sha256(new_password.encode('utf-8')).hexdigest()
+            cursor.execute("UPDATE users SET password_hash = %s WHERE email = %s", 
+                           (password_hash, email))
+            connection.commit()
+            cursor.close()
+            connection.close()
+            
+            logger.info(f"[ADMIN_RESET_PASSWORD] Password reset for: {email}")
+            return jsonify({
+                'status': 'success',
+                'message': 'Password reset successfully'
+            }), 200
+        except Exception as e:
+            logger.error(f"[ADMIN_RESET_PASSWORD] Database error: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 500
+    
+    except Exception as e:
+        logger.error(f"[ADMIN_RESET_PASSWORD] Unexpected error: {str(e)}", exc_info=True)
+        return jsonify({
+            'status': 'error',
+            'message': 'Internal server error'
+        }), 500
+
+@app.route('/api/password-reset-request', methods=['POST'])
+def password_reset_request():
+    """Request password reset - sends email with reset link"""
+    try:
+        logger.info("[PASSWORD_RESET_REQUEST] Request received")
+        
+        data = request.get_json()
+        email = data.get('email')
+        
+        if not email:
+            return jsonify({'status': 'error', 'message': 'Email is required'}), 400
+        
+        LAMBDA_URL = os.getenv('LAMBDA_PASSWORD_RESET_URL')
+        
+        if not LAMBDA_URL:
+            logger.error("[PASSWORD_RESET_REQUEST] Lambda URL not configured")
+            return jsonify({'status': 'error', 'message': 'Service unavailable'}), 500
+        
+        response = requests.post(
+            LAMBDA_URL,
+            json={
+                'body': json.dumps({
+                    'action': 'request_reset',
+                    'email': email
+                })
+            },
+            timeout=30
+        )
+        
+        lambda_response = response.json()
+        
+        if 'body' in lambda_response:
+            actual_response = json.loads(lambda_response['body'])
+            status_code = lambda_response.get('statusCode', 200)
+            return actual_response, status_code
+        
+        return lambda_response, response.status_code
+        
+    except Exception as e:
+        logger.error(f"[PASSWORD_RESET_REQUEST] Error: {str(e)}", exc_info=True)
+        return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
+
+@app.route('/api/password-reset', methods=['POST'])
+def password_reset():
+    """Reset password with token"""
+    try:
+        logger.info("[PASSWORD_RESET] Request received")
+        
+        data = request.get_json()
+        token = data.get('token')
+        new_password = data.get('new_password')
+        
+        if not token or not new_password:
+            return jsonify({'status': 'error', 'message': 'Missing required fields'}), 400
+        
+        LAMBDA_URL = os.getenv('LAMBDA_PASSWORD_RESET_URL')
+        
+        if not LAMBDA_URL:
+            logger.error("[PASSWORD_RESET] Lambda URL not configured")
+            return jsonify({'status': 'error', 'message': 'Service unavailable'}), 500
+        
+        response = requests.post(
+            LAMBDA_URL,
+            json={
+                'body': json.dumps({
+                    'action': 'reset_password',
+                    'token': token,
+                    'new_password': new_password
+                })
+            },
+            timeout=30
+        )
+        
+        lambda_response = response.json()
+        
+        if 'body' in lambda_response:
+            actual_response = json.loads(lambda_response['body'])
+            status_code = lambda_response.get('statusCode', 200)
+            return actual_response, status_code
+        
+        return lambda_response, response.status_code
+        
+    except Exception as e:
+        logger.error(f"[PASSWORD_RESET] Error: {str(e)}", exc_info=True)
+        return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

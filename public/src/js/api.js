@@ -1,12 +1,13 @@
-// api.js - UPDATED WITH ADMIN FUNCTIONS
-// API Service for communicating with Flask backend
+// api.js - FINAL FIX VERSION
+// API Service for communicating with AWS Lambda backend via API Gateway
 // Includes functions for match fetching, prediction submission, user prediction retrieval, and prediction history
 
 const API_BASE_URL = (() => {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'http://localhost:5000/api';
+        return 'http://localhost:5000';
     } else {
-        return `${window.location.protocol}//${window.location.host}/api`;
+        // Use your API Gateway URL for production
+        return 'https://fvw5hp0zo5.execute-api.eu-west-1.amazonaws.com/prod';
     }
 })();
 
@@ -17,6 +18,7 @@ const API_BASE_URL = (() => {
  */
 async function registerUser(userData) {
     try {
+        console.log('Calling registerUser with:', userData);
         const response = await fetch(`${API_BASE_URL}/register`, {
             method: 'POST',
             headers: {
@@ -162,7 +164,8 @@ async function fetchMatches(status = null) {
 }
 
 /**
- * Fetch user's existing predictions for all matches
+ * ✅ FINAL FIX: Fetch user's existing predictions for all matches
+ * Now sends POST request with action field to match Lambda expectations
  * @param {number} userId - User ID
  * @returns {Promise} User predictions data
  */
@@ -170,21 +173,31 @@ async function fetchUserPredictions(userId) {
     try {
         console.log('[API] Fetching predictions for user:', userId);
         
-        const response = await fetch(`${API_BASE_URL}/user-predictions/${userId}`, {
-            method: 'GET',
+        // ✅ FIXED: Send POST request with action field
+        // This matches what the Lambda function expects
+        const response = await fetch(`${API_BASE_URL}/user_predictions`, {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-            }
+            },
+            body: JSON.stringify({
+                action: 'fetch_user_predictions',  // ✅ Lambda expects this!
+                user_id: userId
+            })
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.message || 'Failed to fetch user predictions');
+            throw new Error(data.error || data.message || 'Failed to fetch user predictions');
         }
 
         console.log('[API] User predictions fetched successfully:', data);
-        return data;
+        
+        // ✅ Lambda returns array directly, wrap it in predictions object
+        return {
+            predictions: Array.isArray(data) ? data : []
+        };
     } catch (error) {
         console.error('[API] Fetch user predictions error:', error);
         throw error;
@@ -200,7 +213,7 @@ async function fetchPredictionHistory(userId) {
     try {
         console.log('[API] Fetching prediction history for user:', userId);
         
-        const response = await fetch(`${API_BASE_URL}/prediction-history/${userId}`, {
+        const response = await fetch(`${API_BASE_URL}/prediction_history?user_id=${userId}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -217,6 +230,70 @@ async function fetchPredictionHistory(userId) {
         return data;
     } catch (error) {
         console.error('[API] Fetch prediction history error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Fetch paginated user prediction history
+ * @param {number} userId - User ID
+ * @param {number} page - Page number (default 1)
+ * @param {number} limit - Number of items per page (default 20)
+ * @returns {Promise} Paginated prediction history data
+ */
+async function fetchPaginatedPredictionHistory(userId, page = 1, limit = 20) {
+    try {
+        console.log('[API] Fetching paginated prediction history for user:', userId, 'page:', page);
+
+        // POST with body to match Lambda's event['body'] parsing
+        const response = await fetch(`${API_BASE_URL}/prediction_history`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || `Failed to fetch prediction history: ${response.status}`);
+        }
+
+        // Lambda returns all predictions — filter to finished matches only
+        const allFinished = (data.predictions || []).filter(p => p.status === 'finished');
+
+        // Apply pagination client-side
+        const start = (page - 1) * limit;
+        const paginated = allFinished.slice(start, start + limit);
+
+        // Calculate accuracy for each prediction (Lambda doesn't return this)
+        const predictionsWithAccuracy = paginated.map(pred => {
+            const predictedResult = Math.sign(pred.predicted_home_score - pred.predicted_away_score);
+            const actualResult    = Math.sign(pred.home_score - pred.away_score);
+            const exactScore      = pred.predicted_home_score === pred.home_score &&
+                                    pred.predicted_away_score === pred.away_score;
+            const correctResult   = predictedResult === actualResult;
+            const correctMargin   = Math.abs(
+                (pred.predicted_home_score - pred.predicted_away_score) -
+                (pred.home_score - pred.away_score)
+            ) <= 1;
+
+            const accuracy = exactScore ? 100
+                           : correctResult && correctMargin ? 66
+                           : correctResult ? 33
+                           : 0;
+
+            return { ...pred, accuracy };
+        });
+
+        console.log('[API] Paginated prediction history fetched successfully:', predictionsWithAccuracy);
+
+        return {
+            predictions: predictionsWithAccuracy,
+            pagination: { has_more: start + limit < allFinished.length }
+        };
+
+    } catch (error) {
+        console.error('[API] Fetch paginated prediction history error:', error);
         throw error;
     }
 }
@@ -244,7 +321,7 @@ async function submitPrediction(userId, matchId, predictedHomeScore, predictedAw
             throw new Error('User not authenticated');
         }
 
-        const response = await fetch(`${API_BASE_URL}/predict`, {
+        const response = await fetch(`${API_BASE_URL}/score_prediction`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -419,7 +496,7 @@ async function submitAdminScore(scoreData) {
     try {
         console.log('[API] Submitting admin score:', scoreData);
         
-        const response = await fetch(`${API_BASE_URL}/admin/enter-score`, {
+        const response = await fetch(`${API_BASE_URL}/admin_score_entry`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -449,7 +526,7 @@ async function fetchAllUsers() {
     try {
         console.log('[API] Fetching all users');
         
-        const response = await fetch(`${API_BASE_URL}/admin/users`, {
+        const response = await fetch(`${API_BASE_URL}/admin_users`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -478,21 +555,31 @@ async function fetchAllPredictions() {
     try {
         console.log('[API] Fetching all predictions');
         
-        const response = await fetch(`${API_BASE_URL}/admin/predictions`, {
-            method: 'GET',
+        const response = await fetch(`${API_BASE_URL}/admin_predictions`, {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-            }
+            },
+            body: JSON.stringify({
+                action: 'get_all_predictions'
+            })
         });
 
         const data = await response.json();
+        console.log('[API] Raw response:', data);
 
         if (!response.ok) {
             throw new Error(data.message || 'Failed to fetch predictions');
         }
 
-        console.log('[API] Predictions fetched successfully:', data);
-        return data;
+        // ✅ FIXED: Handle new response format
+        const predictions = data.data?.predictions || data.predictions || [];
+        
+        console.log('[API] Predictions fetched successfully:', predictions);
+        return {
+            predictions: predictions,
+            total_count: predictions.length
+        };
     } catch (error) {
         console.error('[API] Fetch predictions error:', error);
         throw error;
@@ -507,23 +594,350 @@ async function fetchAdminLeaderboard() {
     try {
         console.log('[API] Fetching admin leaderboard');
         
-        const response = await fetch(`${API_BASE_URL}/admin/leaderboard`, {
-            method: 'GET',
+        const response = await fetch(`${API_BASE_URL}/admin_leaderboard`, {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-            }
+            },
+            body: JSON.stringify({
+                action: 'get_admin_leaderboard'
+            })
         });
 
         const data = await response.json();
+        console.log('[API] Raw response:', data);
 
         if (!response.ok) {
             throw new Error(data.message || 'Failed to fetch leaderboard');
         }
 
-        console.log('[API] Leaderboard fetched successfully:', data);
-        return data;
+        // ✅ FIXED: Handle new response format
+        const leaderboard = data.data?.leaderboard || data.leaderboard || [];
+        const stats = data.data?.stats || data.stats || {};
+        
+        console.log('[API] Leaderboard fetched successfully:', leaderboard);
+        return {
+            leaderboard: leaderboard,
+            stats: stats
+        };
     } catch (error) {
         console.error('[API] Fetch leaderboard error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Assign team to user
+ * @param {number} userId - User ID
+ * @param {string} jwtToken - JWT token
+ * @returns {Promise} Team assignment response
+ */
+async function assignTeamToUser(userId, jwtToken) {
+    try {
+        console.log('[API] Assigning team for user:', userId);
+        
+        const response = await fetch(`${API_BASE_URL}/team_assignment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'assign_team',
+                user_id: userId,
+                jwt_token: jwtToken
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to assign team');
+        }
+
+        console.log('[API] Team assignment response:', data);
+        return data;
+    } catch (error) {
+        console.error('[API] Team assignment error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Submit golden boot prediction
+ * @param {number} userId - User ID
+ * @param {string} jwtToken - JWT token
+ * @param {string} playerName - Player name for golden boot
+ * @returns {Promise} Response from server
+ */
+async function submitGoldenBootPrediction(userId, jwtToken, playerName) {
+    try {
+        console.log('[API] Submitting golden boot prediction:', playerName);
+        
+        const response = await fetch(`${API_BASE_URL}/golden_boot`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'predict_golden_boot',
+                user_id: userId,
+                jwt_token: jwtToken,
+                player_name: playerName
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to submit golden boot prediction');
+        }
+
+        console.log('[API] Golden boot prediction response:', data);
+        return data;
+    } catch (error) {
+        console.error('[API] Golden boot prediction error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Submit golden glove prediction
+ * @param {number} userId - User ID
+ * @param {string} jwtToken - JWT token
+ * @param {string} goalkeeperName - Goalkeeper name for golden glove
+ * @returns {Promise} Response from server
+ */
+async function submitGoldenGlovePrediction(userId, jwtToken, goalkeeperName) {
+    try {
+        console.log('[API] Submitting golden glove prediction:', goalkeeperName);
+        
+        const response = await fetch(`${API_BASE_URL}/golden_glove`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'predict_golden_glove',
+                user_id: userId,
+                jwt_token: jwtToken,
+                player_name: goalkeeperName
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to submit golden glove prediction');
+        }
+
+        console.log('[API] Golden glove prediction response:', data);
+        return data;
+    } catch (error) {
+        console.error('[API] Golden glove prediction error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Submit tournament winner prediction
+ * @param {number} userId - User ID
+ * @param {string} jwtToken - JWT token
+ * @param {string} country - Country name for tournament winner
+ * @returns {Promise} Response from server
+ */
+async function submitTournamentWinnerPrediction(userId, jwtToken, country) {
+    try {
+        console.log('[API] Submitting tournament winner prediction:', country);
+        
+        const response = await fetch(`${API_BASE_URL}/tournament_winner`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'predict_tournament_winner',
+                user_id: userId,
+                jwt_token: jwtToken,
+                country: country
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to submit tournament winner prediction');
+        }
+
+        console.log('[API] Tournament winner prediction response:', data);
+        return data;
+    } catch (error) {
+        console.error('[API] Tournament winner prediction error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Request password reset
+ * @param {string} email - User email address
+ * @returns {Promise} Response from server
+ */
+async function requestPasswordReset(email) {
+    try {
+        console.log('[API] Requesting password reset for:', email);
+        
+        const response = await fetch(`${API_BASE_URL}/password_reset`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'request_reset',
+                email: email
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to request password reset');
+        }
+
+        console.log('[API] Password reset request successful:', data);
+        return data;
+    } catch (error) {
+        console.error('[API] Password reset request error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Validate reset token
+ * @param {string} token - Reset token from email link
+ * @returns {Promise} Response with user info if valid
+ */
+async function validateResetToken(token) {
+    try {
+        console.log('[API] Validating reset token');
+        
+        const response = await fetch(`${API_BASE_URL}/password_reset`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'validate_token',
+                token: token
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Invalid or expired reset token');
+        }
+
+        console.log('[API] Token validation successful:', data);
+        return data;
+    } catch (error) {
+        console.error('[API] Token validation error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Reset password with new password
+ * @param {string} token - Reset token from email link
+ * @param {string} newPassword - New password
+ * @returns {Promise} Response from server
+ */
+async function resetPassword(token, newPassword) {
+    try {
+        console.log('[API] Resetting password');
+        
+        const response = await fetch(`${API_BASE_URL}/password_reset`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'reset_password',
+                token: token,
+                new_password: newPassword
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to reset password');
+        }
+
+        console.log('[API] Password reset successful:', data);
+        return data;
+    } catch (error) {
+        console.error('[API] Password reset error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Request password reset email
+ * @param {string} email - User email address
+ * @returns {Promise} Response from server
+ */
+async function requestPasswordReset(email) {
+    try {
+        console.log('[API] Requesting password reset for:', email);
+        
+        const response = await fetch(`${API_BASE_URL}/password-reset-request`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ email: email })
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to send reset email');
+        }
+        
+        console.log('[API] Password reset request successful');
+        return data;
+    } catch (error) {
+        console.error('[API] Password reset request error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Reset password with token
+ * @param {string} token - Reset token from email
+ * @param {string} newPassword - New password
+ * @returns {Promise} Response from server
+ */
+async function resetPassword(token, newPassword) {
+    try {
+        console.log('[API] Resetting password with token');
+        
+        const response = await fetch(`${API_BASE_URL}/password-reset`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                token: token,
+                new_password: newPassword
+            })
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to reset password');
+        }
+        
+        console.log('[API] Password reset successful');
+        return data;
+    } catch (error) {
+        console.error('[API] Password reset error:', error);
         throw error;
     }
 }

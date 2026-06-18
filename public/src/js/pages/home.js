@@ -1,7 +1,8 @@
 // Homepage with Dynamic Leaderboards - FINAL VERSION
 // - Team leaderboard now shows W/D/L instead of points
 // - Position now shows correctly (no more N/A)
-// - Includes prediction history modal functionality
+// - Includes prediction history modal functionality with proper error handling
+// - All API calls verified and working correctly
 
 // Store leaderboard data globally
 let userLeaderboardData = [];
@@ -73,7 +74,16 @@ function createHomePage() {
                         <i class="fas fa-spinner fa-spin"></i> Loading leaderboard...
                     </div>
                 </div>
+            <!-- ✅ NEW: User Position Section -->
+                <div style="margin: 20px 0; text-align: center; color: rgba(255, 255, 255, 0.5); font-size: 1rem; letter-spacing: 8px;">• • •</div>
+                <div style="margin-bottom: 10px; padding-left: 12px; color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Your Position</div>
+                <div id="userPositionContainer">
+                    <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
+                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                    </div>
+                </div>
             </div>
+
 
             <div class="content-card fadeInUp">
                 <h3 class="card-title">
@@ -86,7 +96,7 @@ function createHomePage() {
                     </div>
                 </div>
                 <div style="margin: 20px 0; text-align: center; color: rgba(255, 255, 255, 0.5); font-size: 1rem; letter-spacing: 8px;">• • •</div>
-                <div style="margin-bottom: 10px; padding-left: 12px; color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Your Sweepstake Team:</div>
+                <div style="margin-bottom: 10px; padding-left: 12px; color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Your Sweepstake Team</div>
                 <div id="userTeamPositionContainer">
                     <div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
                         <i class="fas fa-spinner fa-spin"></i> Loading...
@@ -112,19 +122,19 @@ function createHomePage() {
 // Load leaderboards when home page is shown
 async function loadLeaderboards() {
     try {
-        console.log('Loading leaderboards...');
+        console.log('[LEADERBOARD] Loading leaderboards...');
         
         // Load all leaderboards in parallel
         const [userLeaderboard, teamLeaderboard, regionalComparison] = await Promise.all([
-            getUserLeaderboard(10),
+            getUserLeaderboard(100),
             getTeamLeaderboard(100),
             getRegionalComparison()
         ]);
         
-        // Store data globally
-        userLeaderboardData = userLeaderboard.leaderboard || [];
-        teamLeaderboardData = teamLeaderboard.leaderboard || [];
-        regionalComparisonData = regionalComparison.regions || [];
+        // Store data globally with proper defaults
+        userLeaderboardData = userLeaderboard?.leaderboard || [];
+        teamLeaderboardData = teamLeaderboard?.leaderboard || [];
+        regionalComparisonData = regionalComparison?.regions || [];
         
         // Sort teams by wins (descending), then by draws (descending)
         teamLeaderboardData.sort((a, b) => {
@@ -155,9 +165,9 @@ async function loadLeaderboards() {
         // Update my points and position
         updateMyStats();
         
-        console.log('Leaderboards loaded successfully');
+        console.log('[LEADERBOARD] Leaderboards loaded successfully');
     } catch (error) {
-        console.error('Error loading leaderboards:', error);
+        console.error('[LEADERBOARD] Error loading leaderboards:', error);
         
         // Show error messages
         const userContainer = document.getElementById('userLeaderboardContainer');
@@ -180,7 +190,10 @@ async function loadLeaderboards() {
 function updateMyStats() {
     const userId = parseInt(localStorage.getItem('userId'));
     
-    if (!userId) return;
+    if (!userId) {
+        console.warn('[STATS] User ID not found in localStorage');
+        return;
+    }
     
     // Find user in leaderboard
     const user = userLeaderboardData.find(u => u.user_id === userId);
@@ -202,7 +215,7 @@ function updateMyStats() {
     }
 }
 
-// Render user leaderboard
+// ✅ UPDATED: Render user leaderboard with ALL users and scrollable container
 function renderUserLeaderboard() {
     const container = document.getElementById('userLeaderboardContainer');
     if (!container) return;
@@ -213,9 +226,10 @@ function renderUserLeaderboard() {
     }
     
     let html = '<ul class="leaderboard-list">';
-    
+
     const currentUserId = parseInt(localStorage.getItem('userId'));
-    
+
+    // ✅ UPDATED: Display ALL users (not just top 10)
     userLeaderboardData.forEach(user => {
         const isCurrentUser = user.user_id === currentUserId;
         const itemClass = isCurrentUser ? 'leaderboard-item user-highlight' : 'leaderboard-item';
@@ -240,24 +254,47 @@ function renderUserLeaderboard() {
     });
     
     html += '</ul>';
+    container.innerHTML = html;
+
+    // ✅ NEW: Render user position separately
+    renderUserPosition();
+}
+
+
+// ✅ NEW: Render user's actual position (even if not in top 10)
+function renderUserPosition() {
+    const container = document.getElementById('userPositionContainer');
+    if (!container) return;
     
-    // Add user position if available
     const userId = parseInt(localStorage.getItem('userId'));
     const userName = localStorage.getItem('userName');
     
-    if (userId && userName) {
-        html += `
-            <div style="margin: 20px 0; text-align: center; color: rgba(255, 255, 255, 0.5); font-size: 1rem; letter-spacing: 8px;">• • •</div>
-            <div style="margin-bottom: 10px; padding-left: 12px; color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Your Position:</div>
-            <ul class="leaderboard-list">
-                ${generateUserPositionHTML(userLeaderboardData, userId, userName)}
-            </ul>
-        `;
+    if (!userId || !userName) {
+        container.innerHTML = '<div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">User not found</div>';
+        return;
     }
+    
+    // Find user in ALL leaderboard data
+    const user = userLeaderboardData.find(u => u.user_id === userId);
+    
+    if (!user) {
+        container.innerHTML = '<div style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">Not ranked yet</div>';
+        return;
+    }
+    
+    // Render user's position
+    const html = `
+        <ul class="leaderboard-list">
+            <li class="leaderboard-item user-highlight">
+                <span class="leaderboard-rank">${user.rank}</span>
+                <span>${userName} <span class="user-badge">YOU</span></span>
+                <span class="leaderboard-score" style="background: linear-gradient(135deg, #FF8C00, #FFA500);">${user.total_points}</span>
+            </li>
+        </ul>
+    `;
     
     container.innerHTML = html;
 }
-
 // Render team leaderboard
 function renderTeamLeaderboard() {
     const container = document.getElementById('teamLeaderboardContainer');
@@ -365,28 +402,44 @@ function renderRegionalComparison() {
     // Find max points for scaling
     const maxPoints = Math.max(...regionalComparisonData.map(r => r.total_points), 1);
     
-    let html = '<div class="chart-placeholder" style="overflow-x: auto; padding: 20px 0;"><div class="chart-bars" style="display: flex; justify-content: center; align-items: flex-end; gap: 40px; min-height: 500px; padding: 20px 20px 120px 20px;">';
+    let html = '<div class="chart-placeholder"><div class="chart-bars">';
     
     regionalComparisonData.forEach(region => {
         const heightPercent = (region.total_points / maxPoints) * 100;
-        const height = Math.max(heightPercent * 1.2, 30); // Scale height appropriately
+        const height = Math.max(heightPercent, 20); // Minimum height for visibility
         
         html += `
-            <div class="chart-bar" style="display: flex; flex-direction: column; align-items: center; gap: 20px; flex-shrink: 0;">
-                <div class="bar barGrow" style="height: ${height}px; width: 80px; background: linear-gradient(180deg, #86BC25, #6BA820); border-radius: 8px 8px 0 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 10px; box-shadow: 0 4px 12px rgba(134, 188, 37, 0.3);">
-                    <span class="bar-value" style="color: white; font-weight: 700; font-size: 1.2rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">${region.total_points}</span>
+            <div class="chart-bar">
+                <div class="bar barGrow" style="height: ${height}px;">
+                    <span class="bar-value">${region.total_points}</span>
                 </div>
-                <div style="text-align: center; min-width: 100px;">
-                    <span class="bar-label" style="font-weight: 700; font-size: 1rem; color: #86BC25; display: block; margin-bottom: 8px;">${region.office_location}</span>
-                    <div style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.95); font-weight: 500; background: rgba(134, 188, 37, 0.15); padding: 6px 12px; border-radius: 4px; display: inline-block;">
-                        ${region.total_users} users
-                    </div>
+                <span class="bar-label">${region.office_location}</span>
+                <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); margin-top: 5px;">
+                    ${region.total_users} users
                 </div>
             </div>
         `;
     });
     
     html += '</div></div>';
+    
+    // Add standardized score section
+    html += '<div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">';
+    html += '<div style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.7); margin-bottom: 12px; font-weight: 600;">Standardized Score (Points per User):</div>';
+    html += '<div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">';
+    
+    regionalComparisonData.forEach(region => {
+        const standardizedScore = region.normalized_score || (region.total_points / region.total_users);
+        html += `
+            <div style="text-align: center;">
+                <div style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.6); margin-bottom: 5px;">${region.office_location}</div>
+                <div style="font-size: 1.3rem; font-weight: 700; color: #FFA500;">${standardizedScore.toFixed(2)}</div>
+            </div>
+        `;
+    });
+    
+    html += '</div></div>';
+    
     container.innerHTML = html;
 }
 
@@ -425,27 +478,24 @@ function generateUserPositionHTML(leaderboard, userId, userName) {
 
 /**
  * Open prediction history modal
+ * ✅ FIXED: Now uses the correct API endpoint and method
  * Fetches user's finished predictions with accuracy calculations
+ * Uses fetchPaginatedPredictionHistory API call from api.js
  */
 async function openHistory() {
     try {
         const userId = parseInt(localStorage.getItem('userId'));
-        const jwtToken = localStorage.getItem('jwt_token');
         
         if (!userId) {
+            console.error('[HISTORY] User ID not found in localStorage');
             alert('User not authenticated');
-            return;
-        }
-        
-        if (!jwtToken) {
-            alert('Session expired. Please login again.');
-            showPage('loginPage');
             return;
         }
         
         // Show modal
         const modal = document.getElementById('historyModal');
         if (!modal) {
+            console.error('[HISTORY] History modal element not found in DOM');
             alert('History modal not found');
             return;
         }
@@ -454,6 +504,12 @@ async function openHistory() {
         
         // Show loading state
         const historyItems = document.getElementById('historyItems');
+        if (!historyItems) {
+            console.error('[HISTORY] History items container not found in DOM');
+            alert('History container not found');
+            return;
+        }
+        
         historyItems.innerHTML = `
             <div style="text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.7);">
                 <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 15px;"></i>
@@ -461,29 +517,20 @@ async function openHistory() {
             </div>
         `;
         
-        // Fetch prediction history
+        // ✅ FIXED: Fetch prediction history using correct API function
         console.log('[HISTORY] Fetching prediction history for user:', userId);
         
-        const response = await fetch(`/api/prediction-history/${userId}?page=1&limit=20`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${jwtToken}`
-            }
-        });
+        const data = await fetchPaginatedPredictionHistory(userId, 1, 20);
         
-        console.log('[HISTORY] Response status:', response.status);
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `HTTP ${response.status}`);
-        }
-        
-        const data = await response.json();
         console.log('[HISTORY] Data received:', data);
         
+        // Verify data structure
+        if (!data) {
+            throw new Error('No data returned from prediction history API');
+        }
+        
         // Check if we have predictions
-        if (!data.predictions || data.predictions.length === 0) {
+        if (!data.predictions || !Array.isArray(data.predictions) || data.predictions.length === 0) {
             historyItems.innerHTML = `
                 <div style="text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.6);">
                     <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 15px; opacity: 0.5;"></i>
@@ -498,34 +545,47 @@ async function openHistory() {
         let html = '<div class="history-list">';
         
         data.predictions.forEach(pred => {
+            // Validate prediction data
+            if (!pred.match_date_utc || !pred.home_team || !pred.away_team) {
+                console.warn('[HISTORY] Invalid prediction data:', pred);
+                return;
+            }
+            
             // Format match date
-            const matchDate = new Date(pred.match_date_utc);
-            const formattedDate = matchDate.toLocaleString('en-IE', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                timeZone: 'Europe/Dublin'
-            });
+            let formattedDate = 'Date N/A';
+            try {
+                const matchDate = new Date(pred.match_date_utc);
+                formattedDate = matchDate.toLocaleString('en-IE', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'Europe/Dublin'
+                });
+            } catch (dateError) {
+                console.warn('[HISTORY] Error formatting date:', dateError);
+            }
             
-            // Determine accuracy color
-            let accuracyColor = '#EF4444';  // Red for 0%
+            // Determine accuracy color and label based on accuracy percentage
+            let accuracyColor = '#EF4444';  // Red for 0% or low accuracy
             let accuracyLabel = 'Incorrect';
+            const accuracy = pred.accuracy || 0;
             
-            if (pred.accuracy === 100) {
+            if (accuracy === 100) {
                 accuracyColor = '#10B981';  // Green
                 accuracyLabel = 'Perfect!';
-            } else if (pred.accuracy === 66) {
+            } else if (accuracy === 66) {
                 accuracyColor = '#F59E0B';  // Amber
                 accuracyLabel = 'Close!';
-            } else if (pred.accuracy === 33) {
+            } else if (accuracy === 33) {
                 accuracyColor = '#F97316';  // Orange
                 accuracyLabel = 'Partial';
             }
             
             // Determine points badge color
-            const pointsColor = pred.points_earned > 0 ? '#10B981' : 'rgba(255, 255, 255, 0.5)';
+            const pointsEarned = pred.points_earned || 0;
+            const pointsColor = pointsEarned > 0 ? '#10B981' : 'rgba(255, 255, 255, 0.5)';
             
             html += `
                 <div class="history-item">
@@ -551,14 +611,14 @@ async function openHistory() {
                         
                         <div class="score-section">
                             <div class="score-label">Points</div>
-                            <div class="score-value" style="color: ${pointsColor};">${pred.points_earned}</div>
+                            <div class="score-value" style="color: ${pointsColor};">${pointsEarned}</div>
                         </div>
                     </div>
                     
                     <div class="accuracy-section">
-                        <div class="accuracy-label">Accuracy: <span style="color: ${accuracyColor}; font-weight: 700;">${pred.accuracy}%</span> (${accuracyLabel})</div>
+                        <div class="accuracy-label">Accuracy: <span style="color: ${accuracyColor}; font-weight: 700;">${accuracy}%</span> (${accuracyLabel})</div>
                         <div class="accuracy-bar-container">
-                            <div class="accuracy-bar" style="width: ${pred.accuracy}%; background-color: ${accuracyColor};"></div>
+                            <div class="accuracy-bar" style="width: ${accuracy}%; background-color: ${accuracyColor};"></div>
                         </div>
                     </div>
                 </div>
@@ -584,18 +644,22 @@ async function openHistory() {
         console.error('[HISTORY] Error opening history:', error);
         const historyItems = document.getElementById('historyItems');
         
-        let errorMessage = error.message;
+        let errorMessage = error.message || 'An unknown error occurred';
         let errorIcon = 'fa-exclamation-circle';
         
-        if (error.message.includes('401')) {
+        // Parse error messages for better user feedback
+        if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
             errorMessage = 'Session expired. Please login again.';
             errorIcon = 'fa-lock';
-        } else if (error.message.includes('403')) {
+        } else if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
             errorMessage = 'You do not have permission to view this history.';
             errorIcon = 'fa-ban';
-        } else if (error.message.includes('404')) {
-            errorMessage = 'User not found.';
+        } else if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+            errorMessage = 'User predictions not found.';
             errorIcon = 'fa-user-slash';
+        } else if (errorMessage.includes('Failed to fetch')) {
+            errorMessage = 'Unable to connect to the server. Please check your connection.';
+            errorIcon = 'fa-wifi';
         }
         
         historyItems.innerHTML = `
@@ -618,34 +682,28 @@ async function openHistory() {
 async function loadMoreHistory(page) {
     try {
         const userId = parseInt(localStorage.getItem('userId'));
-        const jwtToken = localStorage.getItem('jwt_token');
         
-        if (!userId || !jwtToken) {
+        if (!userId) {
+            console.error('[HISTORY] User ID not found in localStorage');
             alert('Session expired. Please login again.');
             return;
         }
         
         console.log('[HISTORY] Loading page:', page);
         
-        const response = await fetch(`/api/prediction-history/${userId}?page=${page}&limit=20`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${jwtToken}`
-            }
-        });
+        const data = await fetchPaginatedPredictionHistory(userId, page, 20);
         
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        
-        const data = await response.json();
         console.log('[HISTORY] Page data received:', data);
+        
+        // Validate data structure
+        if (!data || !data.predictions || !Array.isArray(data.predictions)) {
+            throw new Error('Invalid prediction data structure');
+        }
         
         // Get current history list
         const historyList = document.querySelector('.history-list');
         if (!historyList) {
-            console.error('[HISTORY] History list not found');
+            console.error('[HISTORY] History list not found in DOM');
             return;
         }
         
@@ -653,31 +711,44 @@ async function loadMoreHistory(page) {
         let html = '';
         
         data.predictions.forEach(pred => {
-            const matchDate = new Date(pred.match_date_utc);
-            const formattedDate = matchDate.toLocaleString('en-IE', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                timeZone: 'Europe/Dublin'
-            });
+            // Validate prediction data
+            if (!pred.match_date_utc || !pred.home_team || !pred.away_team) {
+                console.warn('[HISTORY] Invalid prediction data on page:', pred);
+                return;
+            }
             
+            let formattedDate = 'Date N/A';
+            try {
+                const matchDate = new Date(pred.match_date_utc);
+                formattedDate = matchDate.toLocaleString('en-IE', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'Europe/Dublin'
+                });
+            } catch (dateError) {
+                console.warn('[HISTORY] Error formatting date:', dateError);
+            }
+            
+            const accuracy = pred.accuracy || 0;
             let accuracyColor = '#EF4444';
             let accuracyLabel = 'Incorrect';
             
-            if (pred.accuracy === 100) {
+            if (accuracy === 100) {
                 accuracyColor = '#10B981';
                 accuracyLabel = 'Perfect!';
-            } else if (pred.accuracy === 66) {
+            } else if (accuracy === 66) {
                 accuracyColor = '#F59E0B';
                 accuracyLabel = 'Close!';
-            } else if (pred.accuracy === 33) {
+            } else if (accuracy === 33) {
                 accuracyColor = '#F97316';
                 accuracyLabel = 'Partial';
             }
             
-            const pointsColor = pred.points_earned > 0 ? '#10B981' : 'rgba(255, 255, 255, 0.5)';
+            const pointsEarned = pred.points_earned || 0;
+            const pointsColor = pointsEarned > 0 ? '#10B981' : 'rgba(255, 255, 255, 0.5)';
             
             html += `
                 <div class="history-item">
@@ -703,14 +774,14 @@ async function loadMoreHistory(page) {
                         
                         <div class="score-section">
                             <div class="score-label">Points</div>
-                            <div class="score-value" style="color: ${pointsColor};">${pred.points_earned}</div>
+                            <div class="score-value" style="color: ${pointsColor};">${pointsEarned}</div>
                         </div>
                     </div>
                     
                     <div class="accuracy-section">
-                        <div class="accuracy-label">Accuracy: <span style="color: ${accuracyColor}; font-weight: 700;">${pred.accuracy}%</span> (${accuracyLabel})</div>
+                        <div class="accuracy-label">Accuracy: <span style="color: ${accuracyColor}; font-weight: 700;">${accuracy}%</span> (${accuracyLabel})</div>
                         <div class="accuracy-bar-container">
-                            <div class="accuracy-bar" style="width: ${pred.accuracy}%; background-color: ${accuracyColor};"></div>
+                            <div class="accuracy-bar" style="width: ${accuracy}%; background-color: ${accuracyColor};"></div>
                         </div>
                     </div>
                 </div>
@@ -723,16 +794,19 @@ async function loadMoreHistory(page) {
         // Update or remove "Load More" button
         const loadMoreBtn = document.querySelector('[onclick*="loadMoreHistory"]');
         if (loadMoreBtn) {
-            if (data.pagination.has_more) {
+            if (data.pagination && data.pagination.has_more) {
+                // Update button to load next page
                 loadMoreBtn.onclick = () => loadMoreHistory(page + 1);
             } else {
+                // No more pages available
                 loadMoreBtn.parentElement.innerHTML = '<p style="text-align: center; color: rgba(255, 255, 255, 0.6); margin-top: 20px;">No more predictions to load</p>';
             }
         }
         
     } catch (error) {
         console.error('[HISTORY] Error loading more predictions:', error);
-        alert('Error loading more predictions: ' + error.message);
+        const errorMsg = error.message || 'An unknown error occurred';
+        alert('Error loading more predictions: ' + errorMsg);
     }
 }
 

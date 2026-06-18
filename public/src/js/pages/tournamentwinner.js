@@ -125,33 +125,18 @@ async function submitTournamentWinner(button) {
         const userId = localStorage.getItem('userId');
         const jwtToken = localStorage.getItem('jwt_token');
 
+        // Extract country name without emoji (remove first 2 characters which are emoji + space)
+        const countryName = selection.substring(4).trim();
+
         console.log('Saving tournament winner prediction:', {
             userId: userId,
-            country: selection,
+            country: countryName,
             jwtToken: jwtToken ? 'present' : 'missing'
         });
 
-        // Call Lambda to save prediction
-        const response = await fetch('/api/team-assignment', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${jwtToken}`
-            },
-            body: JSON.stringify({
-                action: 'predict_tournament_winner',
-                user_id: parseInt(userId),
-                jwt_token: jwtToken,
-                country: selection
-            })
-        });
-
-        const data = await response.json();
+        // Call API function to save prediction
+        const data = await submitTournamentWinnerPrediction(userId, jwtToken, countryName);
         console.log('Tournament winner prediction response:', data);
-
-        if (!response.ok) {
-            throw new Error(data.message || 'Prediction save failed');
-        }
 
         // Save to localStorage
         const predictions = JSON.parse(localStorage.getItem('predictions') || '{}');
